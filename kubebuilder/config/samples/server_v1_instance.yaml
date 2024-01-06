@@ -1,0 +1,21 @@
+apiVersion: server.ricochet/v1
+kind: Instance
+metadata:
+  labels:
+    app.kubernetes.io/name: instance
+    app.kubernetes.io/instance: instance-sample
+    app.kubernetes.io/part-of: kubebuilder
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubebuilder
+  name: instance-sample
+spec:
+  id: 00000001
+  size: xs
+  name: Ricochet
+
+  game:
+    name: minecraft_java
+    modloader: vanilla
+  
+  network:
+    type: private
