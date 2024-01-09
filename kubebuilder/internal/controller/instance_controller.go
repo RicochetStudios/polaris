@@ -22,6 +22,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,18 @@ const (
 	// The number of replicas to be used for the statefulset.
 	// Must always be one, game servers cannot be scaled horizontally.
 	statefulSetReplicas int32 = 1
+
+	// The number of seconds to wait before marking a pod as unreachable.
+	//
+	// At 30 seconds, the pod is scheduled to redeploy in 120s total.
+	statefulSetUnreachableSeconds int64 = 30
+
+	// statefulSetImagePullPolicy is the image pull policy to be used for the statefulset.
+	statefulSetImagePullPolicy apiv1.PullPolicy = "Always"
+
+	// The default resources to be requested by the statefulset container.
+	statefulSetRequestResourcesCPU    string = "50m"
+	statefulSetRequestResourcesMemory string = "100Mi"
 )
 
 //+kubebuilder:rbac:groups=server.ricochet,resources=instances,verbs=get;list;watch;create;update;patch;delete
@@ -82,7 +95,7 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, instance, s, req); err != nil {
+	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -100,6 +113,12 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 	containerPorts := []apiv1.ContainerPort{}
 	for _, n := range s.Network {
 		containerPorts = append(containerPorts, toContainerPort(n))
+	}
+
+	// Create the container env vars.
+	containerEnvVars := []apiv1.EnvVar{}
+	for _, setting := range s.Settings {
+		containerEnvVars = append(containerEnvVars, toEnvVar(setting))
 	}
 
 	// Define the wanted statefulset spec.
@@ -130,9 +149,55 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 					Containers: []apiv1.Container{
 						{
 							// Underscores are not allowed in container names.
-							Name:  strings.Replace(instance.Spec.Game.Name, "_", "-", -1),
-							Image: s.Image,
-							Ports: containerPorts,
+							Name:            strings.Replace(instance.Spec.Game.Name, "_", "-", -1),
+							Image:           s.Image,
+							ImagePullPolicy: statefulSetImagePullPolicy,
+							Ports:           containerPorts,
+							Resources: apiv1.ResourceRequirements{
+								Requests: apiv1.ResourceList{
+									apiv1.ResourceCPU:    resource.MustParse(statefulSetRequestResourcesCPU),
+									apiv1.ResourceMemory: resource.MustParse(statefulSetRequestResourcesMemory),
+								},
+								// Limit resources to the specified size, relevant to the schema of the game.
+								Limits: apiv1.ResourceList{
+									apiv1.ResourceCPU:    resource.MustParse(s.Sizes[instance.Spec.Size].Resources.CPU),
+									apiv1.ResourceMemory: resource.MustParse(s.Sizes[instance.Spec.Size].Resources.Memory),
+								},
+							},
+							// Volumes go here.
+							// Probes go here.
+							StartupProbe: &apiv1.Probe{
+								ProbeHandler: apiv1.ProbeHandler{
+									Exec: &apiv1.ExecAction{
+										Command: s.Probes.Command,
+									},
+								},
+								InitialDelaySeconds: int32(s.Probes.StartupProbe.InitialDelaySeconds),
+								PeriodSeconds:       int32(s.Probes.StartupProbe.PeriodSeconds),
+								FailureThreshold:    int32(s.Probes.StartupProbe.FailureThreshold),
+								SuccessThreshold:    int32(s.Probes.StartupProbe.SuccessThreshold),
+								TimeoutSeconds:      int32(s.Probes.StartupProbe.TimeoutSeconds),
+							},
+							ReadinessProbe: &apiv1.Probe{},
+							LivenessProbe:  &apiv1.Probe{},
+							Env:            containerEnvVars,
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						// Make pod redeploy faster when running on a risky node.
+						// Useful for node failures and Azure Spot VMs.
+						{
+							Key:               "node.kubernetes.io/unreachable",
+							Operator:          apiv1.TolerationOpExists,
+							Effect:            apiv1.TaintEffectNoExecute,
+							TolerationSeconds: int64Ptr(statefulSetUnreachableSeconds),
+						},
+						// Deploy to nodes with matching ratios.
+						{
+							Key:      "instance/ratio",
+							Operator: apiv1.TolerationOpEqual,
+							Value:    s.Ratio,
+							Effect:   apiv1.TaintEffectNoSchedule,
 						},
 					},
 				},
@@ -145,6 +210,14 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 	return nil
 }
 
+// toEnvVar converts a registry.Setting to a apiv1.EnvVar.
+func toEnvVar(s registry.Setting) apiv1.EnvVar {
+	return apiv1.EnvVar{
+		Name:  s.Name,
+		Value: s.Value,
+	}
+}
+
 // toContainerPort converts a registry.Network to a apiv1.ContainerPort.
 func toContainerPort(n registry.Network) apiv1.ContainerPort {
 	return apiv1.ContainerPort{
@@ -155,6 +228,8 @@ func toContainerPort(n registry.Network) apiv1.ContainerPort {
 }
 
 func int32Ptr(i int32) *int32 { return &i }
+
+func int64Ptr(i int64) *int64 { return &i }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
