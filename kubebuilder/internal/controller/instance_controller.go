@@ -121,6 +121,11 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		containerEnvVars = append(containerEnvVars, toEnvVar(setting))
 	}
 
+	// Convert probes to from registry.Probe to apiv1.Probe.
+	startupProbe := toProbe(s.Probes.Command, s.Probes.StartupProbe)
+	readinessProbe := toProbe(s.Probes.Command, s.Probes.ReadinessProbe)
+	livenessProbe := toProbe(s.Probes.Command, s.Probes.LivenessProbe)
+
 	// Define the wanted statefulset spec.
 	statefulSet = &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -165,22 +170,12 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 								},
 							},
 							// Volumes go here.
-							// Probes go here.
-							StartupProbe: &apiv1.Probe{
-								ProbeHandler: apiv1.ProbeHandler{
-									Exec: &apiv1.ExecAction{
-										Command: s.Probes.Command,
-									},
-								},
-								InitialDelaySeconds: int32(s.Probes.StartupProbe.InitialDelaySeconds),
-								PeriodSeconds:       int32(s.Probes.StartupProbe.PeriodSeconds),
-								FailureThreshold:    int32(s.Probes.StartupProbe.FailureThreshold),
-								SuccessThreshold:    int32(s.Probes.StartupProbe.SuccessThreshold),
-								TimeoutSeconds:      int32(s.Probes.StartupProbe.TimeoutSeconds),
-							},
-							ReadinessProbe: &apiv1.Probe{},
-							LivenessProbe:  &apiv1.Probe{},
-							Env:            containerEnvVars,
+							// Health check probes.
+							StartupProbe:   startupProbe,
+							ReadinessProbe: readinessProbe,
+							LivenessProbe:  livenessProbe,
+							// Env var game settings.
+							Env: containerEnvVars,
 						},
 					},
 					Tolerations: []apiv1.Toleration{
@@ -206,8 +201,23 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 	}
 
 	// Compare the statefulset spec with the instance spec.
-
 	return nil
+}
+
+// toProbe converts a registry.Probe to a apiv1.Probe.
+func toProbe(c []string, p registry.Probe) *apiv1.Probe {
+	return &apiv1.Probe{
+		ProbeHandler: apiv1.ProbeHandler{
+			Exec: &apiv1.ExecAction{
+				Command: c,
+			},
+		},
+		InitialDelaySeconds: int32(p.InitialDelaySeconds),
+		PeriodSeconds:       int32(p.PeriodSeconds),
+		FailureThreshold:    int32(p.FailureThreshold),
+		SuccessThreshold:    int32(p.SuccessThreshold),
+		TimeoutSeconds:      int32(p.TimeoutSeconds),
+	}
 }
 
 // toEnvVar converts a registry.Setting to a apiv1.EnvVar.
