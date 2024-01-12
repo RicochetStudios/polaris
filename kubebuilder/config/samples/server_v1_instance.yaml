@@ -9,13 +9,13 @@ metadata:
     app.kubernetes.io/created-by: kubebuilder
   name: instance-sample
 spec:
-  id: 00000001
+  id: "00000001"
   size: xs
   name: Ricochet
 
   game:
     name: minecraft_java
-    modloader: vanilla
+    modLoader: vanilla
   
   network:
     type: private
