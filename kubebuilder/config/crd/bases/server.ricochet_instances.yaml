@@ -82,6 +82,17 @@ spec:
             type: object
           status:
             description: InstanceStatus defines the observed state of Instance
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              size:
+                type: string
+            required:
+            - id
+            - name
+            - size
             type: object
         type: object
     served: true
