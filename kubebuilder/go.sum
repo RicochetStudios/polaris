@@ -1,5 +1,5 @@
-github.com/RicochetStudios/registry v1.0.3 h1:a/86iZRPDN9xynt6DqdFo6RJrXtE5RkpFx/o8RTGQDc=
-github.com/RicochetStudios/registry v1.0.3/go.mod h1:dlPsVrZao8sSpXXK1JL/wNcBNMEhSk/gOEEbLjdcETg=
+github.com/RicochetStudios/registry v1.0.4 h1:p/qilpMZoEGeCTq00vtiMHGAZGtVDd3vY1Qwp7YXuao=
+github.com/RicochetStudios/registry v1.0.4/go.mod h1:dlPsVrZao8sSpXXK1JL/wNcBNMEhSk/gOEEbLjdcETg=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.0 h1:ip6w0uFQkncKQ979AypyG0ER7mqUSBdKLOgAle/AT8A=
 github.com/benbjohnson/clock v1.3.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
