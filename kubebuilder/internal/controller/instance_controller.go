@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -59,6 +61,9 @@ const (
 	// The default resources to be requested by the statefulset container.
 	statefulSetRequestResourcesCPU    string = "50m"
 	statefulSetRequestResourcesMemory string = "100Mi"
+
+	// templateRegex is a regular expression to validate templates.
+	templateRegex string = `^{{ (?P<tpl>(\.\w+)*) }}$`
 )
 
 //+kubebuilder:rbac:groups=server.ricochet,resources=instances,verbs=get;list;watch;create;update;patch;delete
@@ -86,13 +91,16 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, instance)
 
 	// Debug line.
-	l.Info("Enter Reconcile", "spec", instance.Spec, "status", instance.Status)
+	l.Info("Got instance", "spec", instance.Spec, "status", instance.Status)
 
 	// Get the schema for the specified game name.
-	s, err := registry.GetSchema(req.Name)
+	s, err := registry.GetSchema(instance.Spec.Game.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	// Debug line.
+	l.Info("Got schema", "schema", s)
 
 	// Create the statefulset for the server.
 	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
@@ -104,15 +112,15 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // reconcileStatefulSet reconciles the statefulset for the server.
 func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance *serverv1.Instance, s registry.Schema, req ctrl.Request, l logr.Logger) error {
-	statefulSet := &appsv1.StatefulSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, statefulSet); err != nil {
-		l.Info("StatefulSet does not exist, creating", "err", err)
-	}
-
 	// Create the container ports.
 	containerPorts := []apiv1.ContainerPort{}
 	for _, n := range s.Network {
 		containerPorts = append(containerPorts, toContainerPort(n))
+	}
+
+	// Template settings.
+	for i, setting := range s.Settings {
+		s.Settings[i].Value = templateValue(setting.Value, s, *instance)
 	}
 
 	// Create the container env vars.
@@ -121,13 +129,13 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		containerEnvVars = append(containerEnvVars, toEnvVar(setting))
 	}
 
-	// Convert probes to from registry.Probe to apiv1.Probe.
-	startupProbe := toProbe(s.Probes.Command, s.Probes.StartupProbe)
-	readinessProbe := toProbe(s.Probes.Command, s.Probes.ReadinessProbe)
-	livenessProbe := toProbe(s.Probes.Command, s.Probes.LivenessProbe)
+	// // Convert probes to from registry.Probe to apiv1.Probe.
+	// startupProbe := toProbe(s.Probes.Command, s.Probes.StartupProbe)
+	// readinessProbe := toProbe(s.Probes.Command, s.Probes.ReadinessProbe)
+	// livenessProbe := toProbe(s.Probes.Command, s.Probes.LivenessProbe)
 
 	// Define the wanted statefulset spec.
-	statefulSet = &appsv1.StatefulSet{
+	desiredStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: instance.Namespace,
 			Name:      instance.Name,
@@ -170,10 +178,10 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 								},
 							},
 							// Volumes go here.
-							// Health check probes.
-							StartupProbe:   startupProbe,
-							ReadinessProbe: readinessProbe,
-							LivenessProbe:  livenessProbe,
+							// // Health check probes.
+							// StartupProbe:   startupProbe,
+							// ReadinessProbe: readinessProbe,
+							// LivenessProbe:  livenessProbe,
 							// Env var game settings.
 							Env: containerEnvVars,
 						},
@@ -200,8 +208,54 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		},
 	}
 
-	// Compare the statefulset spec with the instance spec.
+	// If the statefulSet does not exist, create.
+	statefulSet := &appsv1.StatefulSet{}
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, statefulSet)
+	if err != nil {
+		l.Info("StatefulSet does not exist, creating", "desiredStatefulSet", desiredStatefulSet)
+		return r.Create(ctx, desiredStatefulSet)
+	} else {
+		// If the statefulSet exists, compare.
+		l.Info("StatefulSet exists, comparing", "statefulSet", statefulSet)
+
+		// If the statefulSet is not equal to the desiredStatefulSet, update.
+		if statefulSet != desiredStatefulSet {
+			l.Info("StatefulSet is not as desired, updating")
+			return r.Update(ctx, desiredStatefulSet)
+		}
+	}
+
 	return nil
+}
+
+// templateValue takes a value and resolves its template if it is a template.
+func templateValue(v string, s registry.Schema, i serverv1.Instance) string {
+	// Template the env var if needed.
+	re, err := regexp.Compile(templateRegex)
+	// If the regex is invalid, return an empty string.
+	if err != nil {
+		return ""
+	}
+
+	if re.MatchString(v) {
+		// Get the template to target.
+		matches := re.FindStringSubmatch(v)
+		tplIndex := re.SubexpIndex("tpl")
+		tpl := matches[tplIndex]
+
+		// Resolve the templates.
+		switch tpl {
+		case ".name":
+			return i.Spec.Name
+		case ".modLoader":
+			return i.Spec.Game.ModLoader
+		case ".players":
+			return fmt.Sprint(s.Sizes[i.Spec.Size].Players)
+		}
+	}
+
+	// If it is not a template, return an empty string.
+	return v
 }
 
 // toProbe converts a registry.Probe to a apiv1.Probe.
