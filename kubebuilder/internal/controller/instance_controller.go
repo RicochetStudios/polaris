@@ -82,8 +82,8 @@ const (
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-	// Debug line.
-	l.Info("Enter Reconcile", "req", req)
+	l.Info("starting reconcile")
+	defer l.Info("reconcile finished")
 
 	// Create an empty instance.
 	instance := &serverv1.Instance{}
