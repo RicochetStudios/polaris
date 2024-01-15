@@ -26,6 +26,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -84,8 +85,6 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Debug line.
 	l.Info("Enter Reconcile", "req", req)
 
-	// TODO(user): your logic here
-
 	// Create an empty instance.
 	instance := &serverv1.Instance{}
 	r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, instance)
@@ -104,6 +103,11 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Create the statefulset for the server.
 	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create the service for the server.
+	if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -129,10 +133,10 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		containerEnvVars = append(containerEnvVars, toEnvVar(setting))
 	}
 
-	// // Convert probes to from registry.Probe to apiv1.Probe.
-	// startupProbe := toProbe(s.Probes.Command, s.Probes.StartupProbe)
-	// readinessProbe := toProbe(s.Probes.Command, s.Probes.ReadinessProbe)
-	// livenessProbe := toProbe(s.Probes.Command, s.Probes.LivenessProbe)
+	// Convert probes to from registry.Probe to apiv1.Probe.
+	startupProbe := toProbe(s.Probes.Command, s.Probes.StartupProbe)
+	readinessProbe := toProbe(s.Probes.Command, s.Probes.ReadinessProbe)
+	livenessProbe := toProbe(s.Probes.Command, s.Probes.LivenessProbe)
 
 	// Define the wanted statefulset spec.
 	desiredStatefulSet := &appsv1.StatefulSet{
@@ -178,10 +182,10 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 								},
 							},
 							// Volumes go here.
-							// // Health check probes.
-							// StartupProbe:   startupProbe,
-							// ReadinessProbe: readinessProbe,
-							// LivenessProbe:  livenessProbe,
+							// Health check probes.
+							StartupProbe:   startupProbe,
+							ReadinessProbe: readinessProbe,
+							LivenessProbe:  livenessProbe,
 							// Env var game settings.
 							Env: containerEnvVars,
 						},
@@ -288,6 +292,63 @@ func toContainerPort(n registry.Network) apiv1.ContainerPort {
 		Name:          n.Name,
 		Protocol:      apiv1.Protocol(strings.ToUpper(n.Protocol)),
 		ContainerPort: int32(n.Port),
+	}
+}
+
+// reconcileService reconciles the service for the server.
+func (r *InstanceReconciler) reconcileService(ctx context.Context, instance *serverv1.Instance, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+	// Create the servicePorts.
+	servicePorts := []apiv1.ServicePort{}
+	for _, n := range s.Network {
+		servicePorts = append(servicePorts, toServicePort(n))
+	}
+
+	// Define the wanted service spec.
+	desiredService := &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: instance.Namespace,
+			Name:      instance.Name,
+			Labels: map[string]string{
+				"id":  instance.Spec.Id,
+				"app": instance.Spec.Game.Name,
+			},
+		},
+		Spec: apiv1.ServiceSpec{
+			Selector: map[string]string{
+				"id": instance.Spec.Id,
+			},
+			Type:  apiv1.ServiceTypeLoadBalancer,
+			Ports: servicePorts,
+		},
+	}
+
+	// If the service does not exist, create.
+	service := &apiv1.Service{}
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service)
+	if err != nil {
+		l.Info("Service does not exist, creating", "desiredService", desiredService)
+		return r.Create(ctx, desiredService)
+	} else {
+		// If the service exists, compare.
+		l.Info("Service exists, comparing", "service", service)
+
+		// If the service is not equal to the desiredService, update.
+		if service != desiredService {
+			l.Info("Service is not as desired, updating")
+			return r.Update(ctx, desiredService)
+		}
+	}
+
+	return nil
+}
+
+// toServicePort converts a registry.Network to a apiv1.ServicePort.
+func toServicePort(n registry.Network) apiv1.ServicePort {
+	return apiv1.ServicePort{
+		Name:       n.Name,
+		Protocol:   apiv1.Protocol(strings.ToUpper(n.Protocol)),
+		Port:       int32(n.Port),
+		TargetPort: intstr.FromInt(n.Port),
 	}
 }
 

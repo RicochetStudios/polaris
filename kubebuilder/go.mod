@@ -3,7 +3,7 @@ module ricochet/polaris
 go 1.21.5
 
 require (
-	github.com/RicochetStudios/registry v1.0.4
+	github.com/RicochetStudios/registry v1.0.6
 	github.com/go-logr/logr v1.2.4
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
