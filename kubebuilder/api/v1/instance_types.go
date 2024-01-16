@@ -80,7 +80,7 @@ type InstanceSpec struct {
 
 	// The name of the server.
 	//
-	// +kubebuilder:default:=Ricochet
+	// +kubebuilder:default:=Hyperborea
 	// +optional
 	Name string `json:"name"`
 
