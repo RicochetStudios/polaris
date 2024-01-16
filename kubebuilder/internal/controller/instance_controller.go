@@ -101,6 +101,13 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Debug line.
 	l.Info("Got schema", "schema", s)
 
+	// Create the persistent volume claims for the server.
+	for _, v := range s.Volumes {
+		if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Create the statefulset for the server.
 	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
 		return ctrl.Result{}, err
@@ -116,6 +123,18 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // reconcileStatefulSet reconciles the statefulset for the server.
 func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance *serverv1.Instance, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+	// Create the volumes.
+	volumes := []apiv1.Volume{}
+	for _, v := range s.Volumes {
+		volumes = append(volumes, toSpecVolume(instance, v))
+	}
+
+	// Create the volume mounts.
+	volumeMounts := []apiv1.VolumeMount{}
+	for _, v := range s.Volumes {
+		volumeMounts = append(volumeMounts, toVolumeMount(instance, v))
+	}
+
 	// Create the container ports.
 	containerPorts := []apiv1.ContainerPort{}
 	for _, n := range s.Network {
@@ -163,6 +182,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 					},
 				},
 				Spec: apiv1.PodSpec{
+					Volumes: volumes,
 					Containers: []apiv1.Container{
 						{
 							// Underscores are not allowed in container names.
@@ -182,6 +202,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 								},
 							},
 							// Volumes go here.
+							VolumeMounts: volumeMounts,
 							// Health check probes.
 							StartupProbe:   startupProbe,
 							ReadinessProbe: readinessProbe,
@@ -293,6 +314,84 @@ func toContainerPort(n registry.Network) apiv1.ContainerPort {
 		Protocol:      apiv1.Protocol(strings.ToUpper(n.Protocol)),
 		ContainerPort: int32(n.Port),
 	}
+}
+
+// toSpecVolume converts a registry.Volume to a apiv1.Volume.
+func toSpecVolume(i *serverv1.Instance, v registry.Volume) apiv1.Volume {
+	// Define the name of the PVC and Volume.
+	n := v.Name + "-" + i.Spec.Id
+
+	return apiv1.Volume{
+		Name: n,
+		VolumeSource: apiv1.VolumeSource{
+			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+				ClaimName: n,
+			},
+		},
+	}
+}
+
+// toVolumeMount converts a registry.Volume to a apiv1.VolumeMount.
+func toVolumeMount(i *serverv1.Instance, v registry.Volume) apiv1.VolumeMount {
+	// Define the name of the PVC and Volume.
+	n := v.Name + "-" + i.Spec.Id
+
+	return apiv1.VolumeMount{
+		Name:      n,
+		MountPath: v.Path,
+	}
+}
+
+// reconcilePersistentVolumeClaim reconciles the persistent volume claim for the server.
+func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context, instance *serverv1.Instance, v registry.Volume, req ctrl.Request, l logr.Logger) error {
+	// Define the name of the persistent volume claim.
+	pvcName := v.Name + "-" + instance.Spec.Id
+
+	// Define the wanted persistent volume claim spec.
+	desiredPersistentVolumeClaim := &apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: instance.Namespace,
+			Name:      pvcName,
+			Labels: map[string]string{
+				"id":  instance.Spec.Id,
+				"app": instance.Spec.Game.Name,
+			},
+		},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			AccessModes: []apiv1.PersistentVolumeAccessMode{
+				apiv1.ReadWriteOnce,
+			},
+			// TODO: Add storage class overrides via annotation.
+			// StorageClassName: storageClassAnnotation,
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceStorage: resource.MustParse(v.Size),
+				},
+			},
+		},
+	}
+
+	// If the persistentVolumeClaim does not exist, create.
+	persistentVolumeClaim := &apiv1.PersistentVolumeClaim{}
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, persistentVolumeClaim)
+	if err != nil {
+		l.Info("PersistentVolumeClaim does not exist, creating", "desiredPersistentVolumeClaim", desiredPersistentVolumeClaim)
+		return r.Create(ctx, desiredPersistentVolumeClaim)
+	} else {
+		// If the persistentVolumeClaim exists, compare.
+		l.Info("PersistentVolumeClaim exists, comparing", "persistentVolumeClaim", persistentVolumeClaim)
+
+		// If the persistentVolumeClaim is not equal to the desiredPersistentVolumeClaim, update.
+		if persistentVolumeClaim != desiredPersistentVolumeClaim {
+			l.Info("PersistentVolumeClaim is not as desired, updating")
+			return r.Update(ctx, desiredPersistentVolumeClaim)
+		}
+	}
+
+	return nil
 }
 
 // reconcileService reconciles the service for the server.
