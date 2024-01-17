@@ -85,11 +85,9 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	l.Info("starting reconcile")
 	defer l.Info("reconcile finished")
 
-	// Create an empty instance.
+	// Get the instance.
 	instance := &serverv1.Instance{}
 	r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, instance)
-
-	// Debug line.
 	l.Info("Got instance", "spec", instance.Spec, "status", instance.Status)
 
 	// Get the schema for the specified game name.
@@ -97,8 +95,6 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// Debug line.
 	l.Info("Got schema", "schema", s)
 
 	// Create the persistent volume claims for the server.
@@ -376,7 +372,7 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 
 	// If the persistentVolumeClaim does not exist, create.
 	persistentVolumeClaim := &apiv1.PersistentVolumeClaim{}
-	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, persistentVolumeClaim)
+	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, persistentVolumeClaim)
 	if err != nil {
 		l.Info("PersistentVolumeClaim does not exist, creating", "desiredPersistentVolumeClaim", desiredPersistentVolumeClaim)
 		return r.Create(ctx, desiredPersistentVolumeClaim)
@@ -386,8 +382,7 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 
 		// If the persistentVolumeClaim is not equal to the desiredPersistentVolumeClaim, update.
 		if persistentVolumeClaim != desiredPersistentVolumeClaim {
-			l.Info("PersistentVolumeClaim is not as desired, updating")
-			return r.Update(ctx, desiredPersistentVolumeClaim)
+			l.Info("PersistentVolumeClaim is not as desired, but immutable, skipping")
 		}
 	}
 
