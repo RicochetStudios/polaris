@@ -52,7 +52,7 @@ spec:
                 description: The unique identifier of the game server instance.
                 type: string
               name:
-                default: Ricochet
+                default: Hyperborea
                 description: The name of the server.
                 type: string
               network:

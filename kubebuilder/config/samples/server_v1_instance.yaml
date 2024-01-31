@@ -11,7 +11,7 @@ metadata:
 spec:
   id: "00000001"
   size: xs
-  name: Ricochet
+  # name: Ricochet
 
   game:
     name: minecraft_java
