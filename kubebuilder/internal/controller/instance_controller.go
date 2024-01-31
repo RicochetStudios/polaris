@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -91,27 +92,29 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	l.Info("Got instance", "spec", instance.Spec, "status", instance.Status)
 
 	// Get the schema for the specified game name.
-	s, err := registry.GetSchema(instance.Spec.Game.Name)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	l.Info("Got schema", "schema", s)
-
-	// Create the persistent volume claims for the server.
-	for _, v := range s.Volumes {
-		if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
+	if !reflect.ValueOf(instance.Spec).IsZero() {
+		s, err := registry.GetSchema(instance.Spec.Game.Name)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
-	}
+		l.Info("Got schema", "schema", s)
 
-	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
-		return ctrl.Result{}, err
-	}
+		// Create the persistent volume claims for the server.
+		for _, v := range s.Volumes {
+			if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 
-	// Create the service for the server.
-	if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
-		return ctrl.Result{}, err
+		// Create the statefulset for the server.
+		if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Create the service for the server.
+		if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -229,6 +232,10 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		},
 	}
 
+	// Set the instance as the owner and controller of the statefulSet.
+	// This helps ensure that the statefulSet is deleted when the instance is deleted.
+	ctrl.SetControllerReference(instance, desiredStatefulSet, r.Scheme)
+
 	// If the statefulSet does not exist, create.
 	statefulSet := &appsv1.StatefulSet{}
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, statefulSet)
@@ -236,9 +243,6 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		l.Info("StatefulSet does not exist, creating", "desiredStatefulSet", desiredStatefulSet)
 		return r.Create(ctx, desiredStatefulSet)
 	} else {
-		// If the statefulSet exists, compare.
-		l.Info("StatefulSet exists, comparing", "statefulSet", statefulSet)
-
 		// If the statefulSet is not equal to the desiredStatefulSet, update.
 		if statefulSet != desiredStatefulSet {
 			l.Info("StatefulSet is not as desired, updating")
@@ -315,7 +319,7 @@ func toContainerPort(n registry.Network) apiv1.ContainerPort {
 // toSpecVolume converts a registry.Volume to a apiv1.Volume.
 func toSpecVolume(i *serverv1.Instance, v registry.Volume) apiv1.Volume {
 	// Define the name of the PVC and Volume.
-	n := v.Name + "-" + i.Spec.Id
+	n := v.Name + "-" + i.Name
 
 	return apiv1.Volume{
 		Name: n,
@@ -330,7 +334,7 @@ func toSpecVolume(i *serverv1.Instance, v registry.Volume) apiv1.Volume {
 // toVolumeMount converts a registry.Volume to a apiv1.VolumeMount.
 func toVolumeMount(i *serverv1.Instance, v registry.Volume) apiv1.VolumeMount {
 	// Define the name of the PVC and Volume.
-	n := v.Name + "-" + i.Spec.Id
+	n := v.Name + "-" + i.Name
 
 	return apiv1.VolumeMount{
 		Name:      n,
@@ -341,7 +345,7 @@ func toVolumeMount(i *serverv1.Instance, v registry.Volume) apiv1.VolumeMount {
 // reconcilePersistentVolumeClaim reconciles the persistent volume claim for the server.
 func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context, instance *serverv1.Instance, v registry.Volume, req ctrl.Request, l logr.Logger) error {
 	// Define the name of the persistent volume claim.
-	pvcName := v.Name + "-" + instance.Spec.Id
+	pvcName := v.Name + "-" + instance.Name
 
 	// Define the wanted persistent volume claim spec.
 	desiredPersistentVolumeClaim := &apiv1.PersistentVolumeClaim{
@@ -370,20 +374,18 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 		},
 	}
 
+	// TODO: Add optional field to choose a VolumeClaimDeletePolicy.
+	// Set the instance as the owner and controller of the pvc.
+	// This helps ensure that the pvc is deleted when the instance is deleted.
+	ctrl.SetControllerReference(instance, desiredPersistentVolumeClaim, r.Scheme)
+
 	// If the persistentVolumeClaim does not exist, create.
 	persistentVolumeClaim := &apiv1.PersistentVolumeClaim{}
 	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, persistentVolumeClaim)
+	// PersistentVolumeClaims cannot be modified, only created or deleted.
 	if err != nil {
 		l.Info("PersistentVolumeClaim does not exist, creating", "desiredPersistentVolumeClaim", desiredPersistentVolumeClaim)
 		return r.Create(ctx, desiredPersistentVolumeClaim)
-	} else {
-		// If the persistentVolumeClaim exists, compare.
-		l.Info("PersistentVolumeClaim exists, comparing", "persistentVolumeClaim", persistentVolumeClaim)
-
-		// If the persistentVolumeClaim is not equal to the desiredPersistentVolumeClaim, update.
-		if persistentVolumeClaim != desiredPersistentVolumeClaim {
-			l.Info("PersistentVolumeClaim is not as desired, but immutable, skipping")
-		}
 	}
 
 	return nil
@@ -416,6 +418,10 @@ func (r *InstanceReconciler) reconcileService(ctx context.Context, instance *ser
 		},
 	}
 
+	// Set the instance as the owner and controller of the service.
+	// This helps ensure that the service is deleted when the instance is deleted.
+	ctrl.SetControllerReference(instance, desiredService, r.Scheme)
+
 	// If the service does not exist, create.
 	service := &apiv1.Service{}
 	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service)
@@ -423,9 +429,6 @@ func (r *InstanceReconciler) reconcileService(ctx context.Context, instance *ser
 		l.Info("Service does not exist, creating", "desiredService", desiredService)
 		return r.Create(ctx, desiredService)
 	} else {
-		// If the service exists, compare.
-		l.Info("Service exists, comparing", "service", service)
-
 		// If the service is not equal to the desiredService, update.
 		if service != desiredService {
 			l.Info("Service is not as desired, updating")
