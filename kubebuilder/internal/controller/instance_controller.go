@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/RicochetStudios/registry"
@@ -66,6 +66,9 @@ const (
 
 	// templateRegex is a regular expression to validate templates.
 	templateRegex string = `^{{ (?P<tpl>(\.\w+)*) }}$`
+
+	// finalizer is the finalizer to be used for the instance.
+	instanceFinalizer = "ricochet/finalizer"
 )
 
 //+kubebuilder:rbac:groups=server.ricochet,resources=instances,verbs=get;list;watch;create;update;patch;delete
@@ -88,33 +91,56 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Get the instance.
 	instance := &serverv1.Instance{}
-	r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, instance)
+	r.Get(ctx, req.NamespacedName, instance)
 	l.Info("Got instance", "spec", instance.Spec, "status", instance.Status)
 
-	// Get the schema for the specified game name.
-	if !reflect.ValueOf(instance.Spec).IsZero() {
-		s, err := registry.GetSchema(instance.Spec.Game.Name)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		l.Info("Got schema", "schema", s)
-
-		// Create the persistent volume claims for the server.
-		for _, v := range s.Volumes {
-			if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
+	// Remove the finalizer and return before running any reconciles.
+	// This is done to prevent reconcile functions from running when the instance spec is empty.
+	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isInstanceMarkedToBeDeleted {
+		l.Info("Instance is marked to be deleted")
+		if controllerutil.ContainsFinalizer(instance, instanceFinalizer) {
+			l.Info("Instance finalizer found, removing")
+			controllerutil.RemoveFinalizer(instance, instanceFinalizer)
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+		l.Info("Instance successfully deleted")
+		return ctrl.Result{}, nil
+	}
 
-		// Create the statefulset for the server.
-		if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
+	if !controllerutil.ContainsFinalizer(instance, instanceFinalizer) {
+		// Set finalizer.
+		l.Info("No instance finalizer found, adding")
+		controllerutil.AddFinalizer(instance, instanceFinalizer)
+		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
 
-		// Create the service for the server.
-		if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
+	// Get the schema for the specified game name.
+	s, err := registry.GetSchema(instance.Spec.Game.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	l.Info("Got schema", "schema", s)
+
+	// Create the persistent volume claims for the server.
+	for _, v := range s.Volumes {
+		if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	// Create the statefulset for the server.
+	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create the service for the server.
+	if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
