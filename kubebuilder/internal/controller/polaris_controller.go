@@ -26,6 +26,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/RicochetStudios/registry"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	polarisv1 "ricochet/polaris/api/v1"
 )
@@ -90,7 +93,13 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Get the instance of Polaris.
 	polaris := &polarisv1.Polaris{}
-	r.Get(ctx, req.NamespacedName, polaris)
+	err := r.Get(ctx, req.NamespacedName, polaris)
+	if apierrors.IsNotFound(err) {
+		l.Info("Polaris not found, assuming it was deleted")
+		return reconcile.Result{}, nil
+	} else if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get polaris: %w", err)
+	}
 	l.Info("Got polaris", "spec", polaris.Spec, "status", polaris.Status)
 
 	// Remove the finalizer and return before running any reconciles.
