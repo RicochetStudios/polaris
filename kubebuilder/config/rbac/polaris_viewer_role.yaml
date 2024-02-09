@@ -1,27 +1,27 @@
-# permissions for end users to view instances.
+# permissions for end users to view polaris.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: instance-viewer-role
+    app.kubernetes.io/instance: polaris-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: kubebuilder
     app.kubernetes.io/part-of: kubebuilder
     app.kubernetes.io/managed-by: kustomize
-  name: instance-viewer-role
+  name: polaris-viewer-role
 rules:
 - apiGroups:
-  - server.ricochet
+  - polaris.ricochet
   resources:
-  - instances
+  - polaris
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - server.ricochet
+  - polaris.ricochet
   resources:
-  - instances/status
+  - polaris/status
   verbs:
   - get

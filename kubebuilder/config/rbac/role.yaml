@@ -5,9 +5,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - server.ricochet
+  - polaris.ricochet
   resources:
-  - instances
+  - polaris
   verbs:
   - create
   - delete
@@ -17,15 +17,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - server.ricochet
+  - polaris.ricochet
   resources:
-  - instances/finalizers
+  - polaris/finalizers
   verbs:
   - update
 - apiGroups:
-  - server.ricochet
+  - polaris.ricochet
   resources:
-  - instances/status
+  - polaris/status
   verbs:
   - get
   - patch

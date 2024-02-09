@@ -24,25 +24,24 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/RicochetStudios/registry"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/RicochetStudios/registry"
-	"github.com/go-logr/logr"
-
-	serverv1 "ricochet/polaris/api/v1"
+	polarisv1 "ricochet/polaris/api/v1"
 )
 
-// InstanceReconciler reconciles a Instance object
-type InstanceReconciler struct {
+// PolarisReconciler reconciles a Polaris object
+type PolarisReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -68,59 +67,59 @@ const (
 	templateRegex string = `^{{ (?P<tpl>(\.\w+)*) }}$`
 
 	// finalizer is the finalizer to be used for the instance.
-	instanceFinalizer = "ricochet/finalizer"
+	polarisFinalizer = "ricochet/finalizer"
 )
 
-//+kubebuilder:rbac:groups=server.ricochet,resources=instances,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=server.ricochet,resources=instances/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=server.ricochet,resources=instances/finalizers,verbs=update
+//+kubebuilder:rbac:groups=polaris.ricochet,resources=polaris,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=polaris.ricochet,resources=polaris/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=polaris.ricochet,resources=polaris/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Instance object against the actual cluster state, and then
+// the Polaris object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
+func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 	l.Info("starting reconcile")
 	defer l.Info("reconcile finished")
 
-	// Get the instance.
-	instance := &serverv1.Instance{}
-	r.Get(ctx, req.NamespacedName, instance)
-	l.Info("Got instance", "spec", instance.Spec, "status", instance.Status)
+	// Get the instance of Polaris.
+	polaris := &polarisv1.Polaris{}
+	r.Get(ctx, req.NamespacedName, polaris)
+	l.Info("Got polaris", "spec", polaris.Spec, "status", polaris.Status)
 
 	// Remove the finalizer and return before running any reconciles.
-	// This is done to prevent reconcile functions from running when the instance spec is empty.
-	isInstanceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
-	if isInstanceMarkedToBeDeleted {
-		l.Info("Instance is marked to be deleted")
-		if controllerutil.ContainsFinalizer(instance, instanceFinalizer) {
-			l.Info("Instance finalizer found, removing")
-			controllerutil.RemoveFinalizer(instance, instanceFinalizer)
-			if err := r.Update(ctx, instance); err != nil {
+	// This is done to prevent reconcile functions from running when the polaris spec is empty.
+	ispolarisMarkedToBeDeleted := polaris.GetDeletionTimestamp() != nil
+	if ispolarisMarkedToBeDeleted {
+		l.Info("Polaris is marked to be deleted")
+		if controllerutil.ContainsFinalizer(polaris, polarisFinalizer) {
+			l.Info("Polaris finalizer found, removing")
+			controllerutil.RemoveFinalizer(polaris, polarisFinalizer)
+			if err := r.Update(ctx, polaris); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
-		l.Info("Instance successfully deleted")
+		l.Info("Polaris successfully deleted")
 		return ctrl.Result{}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(instance, instanceFinalizer) {
+	if !controllerutil.ContainsFinalizer(polaris, polarisFinalizer) {
 		// Set finalizer.
-		l.Info("No instance finalizer found, adding")
-		controllerutil.AddFinalizer(instance, instanceFinalizer)
-		if err := r.Update(ctx, instance); err != nil {
+		l.Info("No polaris finalizer found, adding")
+		controllerutil.AddFinalizer(polaris, polarisFinalizer)
+		if err := r.Update(ctx, polaris); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	// Get the schema for the specified game name.
-	s, err := registry.GetSchema(instance.Spec.Game.Name)
+	s, err := registry.GetSchema(polaris.Spec.Game.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -128,18 +127,18 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Create the persistent volume claims for the server.
 	for _, v := range s.Volumes {
-		if err := r.reconcilePersistentVolumeClaim(ctx, instance, v, req, l); err != nil {
+		if err := r.reconcilePersistentVolumeClaim(ctx, polaris, v, req, l); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, instance, s, req, l); err != nil {
+	if err := r.reconcileStatefulSet(ctx, polaris, s, req, l); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create the service for the server.
-	if err := r.reconcileService(ctx, instance, s, req, l); err != nil {
+	if err := r.reconcileService(ctx, polaris, s, req, l); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -147,17 +146,17 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 // reconcileStatefulSet reconciles the statefulset for the server.
-func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance *serverv1.Instance, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcileStatefulSet(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, req ctrl.Request, l logr.Logger) error {
 	// Create the volumes.
 	volumes := []apiv1.Volume{}
 	for _, v := range s.Volumes {
-		volumes = append(volumes, toSpecVolume(instance, v))
+		volumes = append(volumes, toSpecVolume(polaris, v))
 	}
 
 	// Create the volume mounts.
 	volumeMounts := []apiv1.VolumeMount{}
 	for _, v := range s.Volumes {
-		volumeMounts = append(volumeMounts, toVolumeMount(instance, v))
+		volumeMounts = append(volumeMounts, toVolumeMount(polaris, v))
 	}
 
 	// Create the container ports.
@@ -168,7 +167,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 
 	// Template settings.
 	for i, setting := range s.Settings {
-		s.Settings[i].Value = templateValue(setting.Value, s, *instance)
+		s.Settings[i].Value = templateValue(setting.Value, s, *polaris)
 	}
 
 	// Create the container env vars.
@@ -185,25 +184,25 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 	// Define the wanted statefulset spec.
 	desiredStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
-			Name:      instance.Name,
+			Namespace: polaris.Namespace,
+			Name:      polaris.Name,
 			Labels: map[string]string{
-				"id":  instance.Spec.Id,
-				"app": instance.Spec.Game.Name,
+				"id":  polaris.Spec.Id,
+				"app": polaris.Spec.Game.Name,
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: int32Ptr(statefulSetReplicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"id": instance.Spec.Id,
+					"id": polaris.Spec.Id,
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"id":  instance.Spec.Id,
-						"app": instance.Spec.Game.Name,
+						"id":  polaris.Spec.Id,
+						"app": polaris.Spec.Game.Name,
 					},
 				},
 				Spec: apiv1.PodSpec{
@@ -211,7 +210,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 					Containers: []apiv1.Container{
 						{
 							// Underscores are not allowed in container names.
-							Name:            strings.Replace(instance.Spec.Game.Name, "_", "-", -1),
+							Name:            strings.Replace(polaris.Spec.Game.Name, "_", "-", -1),
 							Image:           s.Image,
 							ImagePullPolicy: statefulSetImagePullPolicy,
 							Ports:           containerPorts,
@@ -222,8 +221,8 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 								},
 								// Limit resources to the specified size, relevant to the schema of the game.
 								Limits: apiv1.ResourceList{
-									apiv1.ResourceCPU:    resource.MustParse(s.Sizes[instance.Spec.Size].Resources.CPU),
-									apiv1.ResourceMemory: resource.MustParse(s.Sizes[instance.Spec.Size].Resources.Memory),
+									apiv1.ResourceCPU:    resource.MustParse(s.Sizes[polaris.Spec.Size].Resources.CPU),
+									apiv1.ResourceMemory: resource.MustParse(s.Sizes[polaris.Spec.Size].Resources.Memory),
 								},
 							},
 							// Volumes go here.
@@ -247,7 +246,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 						},
 						// Deploy to nodes with matching ratios.
 						{
-							Key:      "instance/ratio",
+							Key:      "polaris/ratio",
 							Operator: apiv1.TolerationOpEqual,
 							Value:    s.Ratio,
 							Effect:   apiv1.TaintEffectNoSchedule,
@@ -258,13 +257,13 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 		},
 	}
 
-	// Set the instance as the owner and controller of the statefulSet.
-	// This helps ensure that the statefulSet is deleted when the instance is deleted.
-	ctrl.SetControllerReference(instance, desiredStatefulSet, r.Scheme)
+	// Set polaris as the owner and controller of the statefulSet.
+	// This helps ensure that the statefulSet is deleted when polaris is deleted.
+	ctrl.SetControllerReference(polaris, desiredStatefulSet, r.Scheme)
 
 	// If the statefulSet does not exist, create.
 	statefulSet := &appsv1.StatefulSet{}
-	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, statefulSet)
+	err := r.Get(ctx, types.NamespacedName{Name: polaris.Name, Namespace: polaris.Namespace}, statefulSet)
 	if err != nil {
 		l.Info("StatefulSet does not exist, creating", "desiredStatefulSet", desiredStatefulSet)
 		return r.Create(ctx, desiredStatefulSet)
@@ -280,7 +279,7 @@ func (r *InstanceReconciler) reconcileStatefulSet(ctx context.Context, instance 
 }
 
 // templateValue takes a value and resolves its template if it is a template.
-func templateValue(v string, s registry.Schema, i serverv1.Instance) string {
+func templateValue(v string, s registry.Schema, i polarisv1.Polaris) string {
 	// Template the env var if needed.
 	re, err := regexp.Compile(templateRegex)
 	// If the regex is invalid, return an empty string.
@@ -343,7 +342,7 @@ func toContainerPort(n registry.Network) apiv1.ContainerPort {
 }
 
 // toSpecVolume converts a registry.Volume to a apiv1.Volume.
-func toSpecVolume(i *serverv1.Instance, v registry.Volume) apiv1.Volume {
+func toSpecVolume(i *polarisv1.Polaris, v registry.Volume) apiv1.Volume {
 	// Define the name of the PVC and Volume.
 	n := v.Name + "-" + i.Name
 
@@ -358,7 +357,7 @@ func toSpecVolume(i *serverv1.Instance, v registry.Volume) apiv1.Volume {
 }
 
 // toVolumeMount converts a registry.Volume to a apiv1.VolumeMount.
-func toVolumeMount(i *serverv1.Instance, v registry.Volume) apiv1.VolumeMount {
+func toVolumeMount(i *polarisv1.Polaris, v registry.Volume) apiv1.VolumeMount {
 	// Define the name of the PVC and Volume.
 	n := v.Name + "-" + i.Name
 
@@ -369,18 +368,18 @@ func toVolumeMount(i *serverv1.Instance, v registry.Volume) apiv1.VolumeMount {
 }
 
 // reconcilePersistentVolumeClaim reconciles the persistent volume claim for the server.
-func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context, instance *serverv1.Instance, v registry.Volume, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcilePersistentVolumeClaim(ctx context.Context, polaris *polarisv1.Polaris, v registry.Volume, req ctrl.Request, l logr.Logger) error {
 	// Define the name of the persistent volume claim.
-	pvcName := v.Name + "-" + instance.Name
+	pvcName := v.Name + "-" + polaris.Name
 
 	// Define the wanted persistent volume claim spec.
 	desiredPersistentVolumeClaim := &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
+			Namespace: polaris.Namespace,
 			Name:      pvcName,
 			Labels: map[string]string{
-				"id":  instance.Spec.Id,
-				"app": instance.Spec.Game.Name,
+				"id":  polaris.Spec.Id,
+				"app": polaris.Spec.Game.Name,
 			},
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
@@ -389,7 +388,7 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 			},
 			// TODO: Add storage class overrides via annotation.
 			// StorageClassName: storageClassAnnotation,
-			Resources: apiv1.ResourceRequirements{
+			Resources: apiv1.VolumeResourceRequirements{
 				Requests: apiv1.ResourceList{
 					apiv1.ResourceStorage: resource.MustParse("1Gi"),
 				},
@@ -401,13 +400,13 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 	}
 
 	// TODO: Add optional field to choose a VolumeClaimDeletePolicy.
-	// Set the instance as the owner and controller of the pvc.
-	// This helps ensure that the pvc is deleted when the instance is deleted.
-	ctrl.SetControllerReference(instance, desiredPersistentVolumeClaim, r.Scheme)
+	// Set polaris as the owner and controller of the pvc.
+	// This helps ensure that the pvc is deleted when polaris is deleted.
+	ctrl.SetControllerReference(polaris, desiredPersistentVolumeClaim, r.Scheme)
 
 	// If the persistentVolumeClaim does not exist, create.
 	persistentVolumeClaim := &apiv1.PersistentVolumeClaim{}
-	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: instance.Namespace}, persistentVolumeClaim)
+	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: polaris.Namespace}, persistentVolumeClaim)
 	// PersistentVolumeClaims cannot be modified, only created or deleted.
 	if err != nil {
 		l.Info("PersistentVolumeClaim does not exist, creating", "desiredPersistentVolumeClaim", desiredPersistentVolumeClaim)
@@ -418,7 +417,7 @@ func (r *InstanceReconciler) reconcilePersistentVolumeClaim(ctx context.Context,
 }
 
 // reconcileService reconciles the service for the server.
-func (r *InstanceReconciler) reconcileService(ctx context.Context, instance *serverv1.Instance, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcileService(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, req ctrl.Request, l logr.Logger) error {
 	// Create the servicePorts.
 	servicePorts := []apiv1.ServicePort{}
 	for _, n := range s.Network {
@@ -428,29 +427,29 @@ func (r *InstanceReconciler) reconcileService(ctx context.Context, instance *ser
 	// Define the wanted service spec.
 	desiredService := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
-			Name:      instance.Name,
+			Namespace: polaris.Namespace,
+			Name:      polaris.Name,
 			Labels: map[string]string{
-				"id":  instance.Spec.Id,
-				"app": instance.Spec.Game.Name,
+				"id":  polaris.Spec.Id,
+				"app": polaris.Spec.Game.Name,
 			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				"id": instance.Spec.Id,
+				"id": polaris.Spec.Id,
 			},
 			Type:  apiv1.ServiceTypeLoadBalancer,
 			Ports: servicePorts,
 		},
 	}
 
-	// Set the instance as the owner and controller of the service.
-	// This helps ensure that the service is deleted when the instance is deleted.
-	ctrl.SetControllerReference(instance, desiredService, r.Scheme)
+	// Set polaris as the owner and controller of the service.
+	// This helps ensure that the service is deleted when polaris is deleted.
+	ctrl.SetControllerReference(polaris, desiredService, r.Scheme)
 
 	// If the service does not exist, create.
 	service := &apiv1.Service{}
-	err := r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service)
+	err := r.Get(ctx, types.NamespacedName{Name: polaris.Name, Namespace: polaris.Namespace}, service)
 	if err != nil {
 		l.Info("Service does not exist, creating", "desiredService", desiredService)
 		return r.Create(ctx, desiredService)
@@ -480,8 +479,8 @@ func int32Ptr(i int32) *int32 { return &i }
 func int64Ptr(i int64) *int64 { return &i }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *PolarisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&serverv1.Instance{}).
+		For(&polarisv1.Polaris{}).
 		Complete(r)
 }

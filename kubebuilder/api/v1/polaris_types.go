@@ -62,8 +62,8 @@ type Network struct {
 	Type NetworkType `json:"type"`
 }
 
-// InstanceSpec defines the desired state of Instance
-type InstanceSpec struct {
+// PolarisSpec defines the desired state of Polaris
+type PolarisSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -93,8 +93,8 @@ type InstanceSpec struct {
 	Network Network `json:"network"`
 }
 
-// InstanceStatus defines the observed state of Instance
-type InstanceStatus struct {
+// PolarisStatus defines the observed state of Polaris
+type PolarisStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -108,24 +108,24 @@ type InstanceStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Instance is the Schema for the instances API
-type Instance struct {
+// Polaris is the Schema for the polaris API
+type Polaris struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   InstanceSpec   `json:"spec,omitempty"`
-	Status InstanceStatus `json:"status,omitempty"`
+	Spec   PolarisSpec   `json:"spec,omitempty"`
+	Status PolarisStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// InstanceList contains a list of Instance
-type InstanceList struct {
+// PolarisList contains a list of Polaris
+type PolarisList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Instance `json:"items"`
+	Items           []Polaris `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Instance{}, &InstanceList{})
+	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
 }

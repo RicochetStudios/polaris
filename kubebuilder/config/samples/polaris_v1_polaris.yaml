@@ -1,13 +1,13 @@
-apiVersion: server.ricochet/v1
-kind: Instance
+apiVersion: polaris.ricochet/v1
+kind: Polaris
 metadata:
   labels:
-    app.kubernetes.io/name: instance
-    app.kubernetes.io/instance: instance-sample
+    app.kubernetes.io/name: polaris
+    app.kubernetes.io/instance: polaris-sample
     app.kubernetes.io/part-of: kubebuilder
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: kubebuilder
-  name: instance-sample
+  name: polaris-sample
 spec:
   id: "00000001"
   size: xs

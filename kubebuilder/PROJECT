@@ -13,8 +13,8 @@ resources:
     namespaced: true
   controller: true
   domain: ricochet
-  group: server
-  kind: Instance
+  group: polaris
+  kind: Polaris
   path: ricochet/polaris/api/v1
   version: v1
 version: "3"
