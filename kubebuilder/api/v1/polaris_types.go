@@ -93,20 +93,33 @@ type PolarisSpec struct {
 	Network Network `json:"network"`
 }
 
+// PolarisState defines the current operating condition of the server.
+// Only one of the following states may be specified.
+// +kubebuilder:validation:Enum=creating;starting;running;stopping;stopped;deleting;failed
+type PolarisState string
+
+const (
+	PolarisStateCreating  PolarisState = "creating"
+	PolarisStateStarting  PolarisState = "starting"
+	PolarisStateRunning   PolarisState = "running"
+	PolarisStateStopping  PolarisState = "stopping"
+	PolarisStateStopped   PolarisState = "stopped"
+	PolarisStateDeleting  PolarisState = "deleting"
+	PolarisStateFinalized PolarisState = "finalized"
+	PolarisStateFailed    PolarisState = "failed"
+)
+
 // PolarisStatus defines the observed state of Polaris
 type PolarisStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Id string `json:"id"`
-
-	Size string `json:"size"`
-
-	Name string `json:"name"`
+	State PolarisState `json:"state"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
 // Polaris is the Schema for the polaris API
 type Polaris struct {

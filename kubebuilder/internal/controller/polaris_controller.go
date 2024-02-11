@@ -106,8 +106,13 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// This is done to prevent reconcile functions from running when the polaris spec is empty.
 	ispolarisMarkedToBeDeleted := polaris.GetDeletionTimestamp() != nil
 	if ispolarisMarkedToBeDeleted {
-		l.Info("Polaris is marked to be deleted")
+		l.Info("Polaris is being deleted")
 		if controllerutil.ContainsFinalizer(polaris, polarisFinalizer) {
+			// Run logic to perform before deleting the polaris instance.
+			if err := r.finalizePolaris(ctx, polaris, l); err != nil {
+				return ctrl.Result{}, err
+			}
+
 			l.Info("Polaris finalizer found, removing")
 			controllerutil.RemoveFinalizer(polaris, polarisFinalizer)
 			if err := r.Update(ctx, polaris); err != nil {
@@ -119,8 +124,13 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if !controllerutil.ContainsFinalizer(polaris, polarisFinalizer) {
-		// Set finalizer.
-		l.Info("No polaris finalizer found, adding")
+		// This log line is printed exactly once during initial provisioning,
+		// because once the finalizer is in place this block gets skipped. So,
+		// this is a nice place to tell the operator that the high level,
+		// multi-reconcile operation is underway.
+		l.Info("Deploying Polaris server")
+		polaris.Status.State = polarisv1.PolarisStateCreating
+
 		controllerutil.AddFinalizer(polaris, polarisFinalizer)
 		if err := r.Update(ctx, polaris); err != nil {
 			return ctrl.Result{}, err
@@ -151,7 +161,68 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	// Update the status of the Polaris instance.
+	if err := r.setCurrentState(ctx, polaris, l); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+// setCurrentState sets the current state of the Polaris instance.
+// It checks the phase of the persistent volume claim and the pod.
+func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
+	// TODO: Get the state of the service.
+
+	// Get the persistent volume claims for the server.
+	persistentVolumeClaims := &apiv1.PersistentVolumeClaimList{}
+	err := r.List(ctx, persistentVolumeClaims, client.InNamespace(polaris.Namespace))
+	if err != nil {
+		return fmt.Errorf("failed to list persistent volume claims: %w", err)
+	}
+	l.Info("Got persistent volume claims", "persistentVolumeClaims", persistentVolumeClaims)
+
+	// Get the state of the pvc.
+	var pvc *apiv1.PersistentVolumeClaim = &persistentVolumeClaims.Items[0]
+	pvcStatus := pvc.Status.Phase
+
+	// Get the pods for the server.
+	pods := &apiv1.PodList{}
+	err = r.List(ctx, pods, client.InNamespace(polaris.Namespace), client.MatchingLabels{"id": polaris.Spec.Id})
+	if err != nil {
+		return fmt.Errorf("failed to list pods: %w", err)
+	}
+	l.Info("Got pods", "pods", pods)
+
+	// Get the state of the pod.
+	var pod *apiv1.Pod = &pods.Items[0]
+	podStatus := pod.Status.Phase
+
+	// Get the state of the Polaris server.
+	if pvcStatus == apiv1.ClaimBound && podStatus == apiv1.PodRunning {
+		polaris.Status.State = polarisv1.PolarisStateRunning
+	} else if pvcStatus == apiv1.ClaimPending || podStatus == apiv1.PodPending {
+		polaris.Status.State = polarisv1.PolarisStateCreating
+	} else if pvcStatus == apiv1.ClaimLost || podStatus == apiv1.PodFailed {
+		polaris.Status.State = polarisv1.PolarisStateFailed
+	}
+
+	// Update the status of the Polaris instance.
+	if err = r.Status().Update(ctx, polaris); err != nil {
+		return fmt.Errorf("failed to update polaris status: %w", err)
+	}
+
+	return nil
+}
+
+// finalizePolaris runs logic to perform before deleting the polaris instance.
+func (r *PolarisReconciler) finalizePolaris(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
+	polaris.Status.State = polarisv1.PolarisStateDeleting
+	if err := r.Update(ctx, polaris); err != nil {
+		return fmt.Errorf("failed to update polaris status: %w", err)
+	}
+
+	return nil
 }
 
 // reconcileStatefulSet reconciles the statefulset for the server.
@@ -491,5 +562,9 @@ func int64Ptr(i int64) *int64 { return &i }
 func (r *PolarisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&polarisv1.Polaris{}).
+		Owns(&appsv1.StatefulSet{}).
+		Owns(&apiv1.PersistentVolumeClaim{}).
+		Owns(&apiv1.Service{}).
+		Owns(&apiv1.Pod{}).
 		Complete(r)
 }
