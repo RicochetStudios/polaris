@@ -101,7 +101,6 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	} else if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get polaris: %w", err)
 	}
-	l.Info("Got polaris", "spec", polaris.Spec, "status", polaris.Status)
 
 	// Remove the finalizer and return before running any reconciles.
 	// This is done to prevent reconcile functions from running when the polaris spec is empty.
@@ -120,7 +119,7 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 		}
-		l.Info("Polaris successfully deleted")
+		l.Info("Polaris resources cleaned up")
 		return ctrl.Result{}, nil
 	}
 
@@ -129,7 +128,7 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// because once the finalizer is in place this block gets skipped. So,
 		// this is a nice place to tell the operator that the high level,
 		// multi-reconcile operation is underway.
-		l.Info("Deploying Polaris server")
+		l.Info("ensuring Polaris is set up")
 		polaris.Status.State = polarisv1.PolarisStateCreating
 		if err = r.Status().Update(ctx, polaris); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update polaris status: %w", err)
@@ -146,11 +145,11 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	l.Info("Got schema", "schema", s)
+	l.Info("Got schema for game " + s.Name)
 
 	// Create the persistent volume claims for the server.
 	for _, v := range s.Volumes {
-		if err := r.reconcilePersistentVolumeClaim(ctx, polaris, v, req, l); err != nil {
+		if err := r.reconcilePvc(ctx, polaris, v, req, l); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -182,6 +181,7 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	err := error(nil)
 	defer func() {
 		err = r.Status().Update(ctx, polaris)
+		l.Info("Polaris " + string(polaris.Status.State))
 	}()
 	if err != nil {
 		return fmt.Errorf("failed to update polaris status: %w", err)
@@ -193,7 +193,6 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	if err != nil {
 		return fmt.Errorf("failed to list persistent volume claims: %w", err)
 	}
-	// l.Info("Got persistent volume claims", "pvcs", pvcs)
 
 	// Get the state of the pvc.
 	var pvc *apiv1.PersistentVolumeClaim = &pvcs.Items[0]
@@ -205,7 +204,6 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
-	// l.Info("Got pods", "pods", pods)
 
 	// Get the state of the pod.
 	var pod *apiv1.Pod = &pods.Items[0]
@@ -359,7 +357,7 @@ func (r *PolarisReconciler) reconcileStatefulSet(ctx context.Context, polaris *p
 	statefulSet := &appsv1.StatefulSet{}
 	err := r.Get(ctx, types.NamespacedName{Name: polaris.Name, Namespace: polaris.Namespace}, statefulSet)
 	if err != nil {
-		l.Info("StatefulSet does not exist, creating", "desiredStatefulSet", desiredStatefulSet)
+		l.Info("StatefulSet does not exist, creating")
 		return r.Create(ctx, desiredStatefulSet)
 	} else {
 		// If the statefulSet is not equal to the desiredStatefulSet, update.
@@ -461,13 +459,13 @@ func toVolumeMount(i *polarisv1.Polaris, v registry.Volume) apiv1.VolumeMount {
 	}
 }
 
-// reconcilePersistentVolumeClaim reconciles the persistent volume claim for the server.
-func (r *PolarisReconciler) reconcilePersistentVolumeClaim(ctx context.Context, polaris *polarisv1.Polaris, v registry.Volume, req ctrl.Request, l logr.Logger) error {
+// reconcilePvc reconciles the persistent volume claim for the server.
+func (r *PolarisReconciler) reconcilePvc(ctx context.Context, polaris *polarisv1.Polaris, v registry.Volume, req ctrl.Request, l logr.Logger) error {
 	// Define the name of the persistent volume claim.
 	pvcName := v.Name + "-" + polaris.Name
 
 	// Define the wanted persistent volume claim spec.
-	desiredPersistentVolumeClaim := &apiv1.PersistentVolumeClaim{
+	desiredPvc := &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: polaris.Namespace,
 			Name:      pvcName,
@@ -496,15 +494,15 @@ func (r *PolarisReconciler) reconcilePersistentVolumeClaim(ctx context.Context, 
 	// TODO: Add optional field to choose a VolumeClaimDeletePolicy.
 	// Set polaris as the owner and controller of the pvc.
 	// This helps ensure that the pvc is deleted when polaris is deleted.
-	ctrl.SetControllerReference(polaris, desiredPersistentVolumeClaim, r.Scheme)
+	ctrl.SetControllerReference(polaris, desiredPvc, r.Scheme)
 
-	// If the persistentVolumeClaim does not exist, create.
-	persistentVolumeClaim := &apiv1.PersistentVolumeClaim{}
-	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: polaris.Namespace}, persistentVolumeClaim)
+	// If the pvc does not exist, create.
+	pvc := &apiv1.PersistentVolumeClaim{}
+	err := r.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: polaris.Namespace}, pvc)
 	// PersistentVolumeClaims cannot be modified, only created or deleted.
 	if err != nil {
-		l.Info("PersistentVolumeClaim does not exist, creating", "desiredPersistentVolumeClaim", desiredPersistentVolumeClaim)
-		return r.Create(ctx, desiredPersistentVolumeClaim)
+		l.Info("PersistentVolumeClaim does not exist, creating")
+		return r.Create(ctx, desiredPvc)
 	}
 
 	return nil
@@ -545,7 +543,7 @@ func (r *PolarisReconciler) reconcileService(ctx context.Context, polaris *polar
 	service := &apiv1.Service{}
 	err := r.Get(ctx, types.NamespacedName{Name: polaris.Name, Namespace: polaris.Namespace}, service)
 	if err != nil {
-		l.Info("Service does not exist, creating", "desiredService", desiredService)
+		l.Info("Service does not exist, creating")
 		return r.Create(ctx, desiredService)
 	} else {
 		// If the service is not equal to the desiredService, update.
