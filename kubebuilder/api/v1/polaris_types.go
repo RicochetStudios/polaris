@@ -99,14 +99,13 @@ type PolarisSpec struct {
 type PolarisState string
 
 const (
-	PolarisStateCreating  PolarisState = "creating"
-	PolarisStateStarting  PolarisState = "starting"
-	PolarisStateRunning   PolarisState = "running"
-	PolarisStateStopping  PolarisState = "stopping"
-	PolarisStateStopped   PolarisState = "stopped"
-	PolarisStateDeleting  PolarisState = "deleting"
-	PolarisStateFinalized PolarisState = "finalized"
-	PolarisStateFailed    PolarisState = "failed"
+	PolarisStateCreating PolarisState = "creating"
+	PolarisStateStarting PolarisState = "starting"
+	PolarisStateRunning  PolarisState = "running"
+	PolarisStateStopping PolarisState = "stopping"
+	PolarisStateStopped  PolarisState = "stopped"
+	PolarisStateDeleting PolarisState = "deleting"
+	PolarisStateFailed   PolarisState = "failed"
 )
 
 // PolarisStatus defines the observed state of Polaris

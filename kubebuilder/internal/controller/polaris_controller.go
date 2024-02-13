@@ -130,6 +130,9 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// multi-reconcile operation is underway.
 		l.Info("Deploying Polaris server")
 		polaris.Status.State = polarisv1.PolarisStateCreating
+		if err = r.Status().Update(ctx, polaris); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update polaris status: %w", err)
+		}
 
 		controllerutil.AddFinalizer(polaris, polarisFinalizer)
 		if err := r.Update(ctx, polaris); err != nil {
@@ -174,16 +177,25 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
 	// TODO: Get the state of the service.
 
+	// Update the status of the Polaris instance.
+	err := error(nil)
+	defer func() {
+		err = r.Status().Update(ctx, polaris)
+	}()
+	if err != nil {
+		return fmt.Errorf("failed to update polaris status: %w", err)
+	}
+
 	// Get the persistent volume claims for the server.
-	persistentVolumeClaims := &apiv1.PersistentVolumeClaimList{}
-	err := r.List(ctx, persistentVolumeClaims, client.InNamespace(polaris.Namespace))
+	pvcs := &apiv1.PersistentVolumeClaimList{}
+	err = r.List(ctx, pvcs, client.InNamespace(polaris.Namespace))
 	if err != nil {
 		return fmt.Errorf("failed to list persistent volume claims: %w", err)
 	}
-	l.Info("Got persistent volume claims", "persistentVolumeClaims", persistentVolumeClaims)
+	// l.Info("Got persistent volume claims", "pvcs", pvcs)
 
 	// Get the state of the pvc.
-	var pvc *apiv1.PersistentVolumeClaim = &persistentVolumeClaims.Items[0]
+	var pvc *apiv1.PersistentVolumeClaim = &pvcs.Items[0]
 	pvcStatus := pvc.Status.Phase
 
 	// Get the pods for the server.
@@ -192,7 +204,7 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
-	l.Info("Got pods", "pods", pods)
+	// l.Info("Got pods", "pods", pods)
 
 	// Get the state of the pod.
 	var pod *apiv1.Pod = &pods.Items[0]
@@ -205,11 +217,12 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 		polaris.Status.State = polarisv1.PolarisStateCreating
 	} else if pvcStatus == apiv1.ClaimLost || podStatus == apiv1.PodFailed {
 		polaris.Status.State = polarisv1.PolarisStateFailed
-	}
-
-	// Update the status of the Polaris instance.
-	if err = r.Status().Update(ctx, polaris); err != nil {
-		return fmt.Errorf("failed to update polaris status: %w", err)
+		// define some unique error messages for the different failure states
+		if pvcStatus == apiv1.ClaimLost {
+			return fmt.Errorf("polaris failed: persistent volume claim is lost")
+		} else if podStatus == apiv1.PodFailed {
+			return fmt.Errorf("polaris failed: pod is in a failed state")
+		}
 	}
 
 	return nil
