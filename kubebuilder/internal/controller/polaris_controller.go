@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -362,7 +363,7 @@ func (r *PolarisReconciler) reconcileStatefulSet(ctx context.Context, polaris *p
 		return r.Create(ctx, desiredStatefulSet)
 	} else {
 		// If the statefulSet is not equal to the desiredStatefulSet, update.
-		if statefulSet != desiredStatefulSet {
+		if !reflect.DeepEqual(statefulSet, desiredStatefulSet) {
 			l.Info("StatefulSet is not as desired, updating")
 			return r.Update(ctx, desiredStatefulSet)
 		}
@@ -548,7 +549,7 @@ func (r *PolarisReconciler) reconcileService(ctx context.Context, polaris *polar
 		return r.Create(ctx, desiredService)
 	} else {
 		// If the service is not equal to the desiredService, update.
-		if service != desiredService {
+		if !reflect.DeepEqual(service, desiredService) {
 			l.Info("Service is not as desired, updating")
 			return r.Update(ctx, desiredService)
 		}
