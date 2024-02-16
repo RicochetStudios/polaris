@@ -51,13 +51,13 @@
 				"ms-vscode.makefile-tools"
 			]
 		}
-	}
+	},
 	
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "minikube start && kubectl version && kubectl proxy --port=8443",
+	"postCreateCommand": "minikube start && kubectl version && kubectl proxy --port=8443"
 
 	// Use 'postStartCommand' to run commands after the container is created like starting minikube.
 	// "postStartCommand": [
