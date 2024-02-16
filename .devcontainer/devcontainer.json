@@ -57,13 +57,10 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "minikube start && kubectl version && kubectl proxy --port=8443"
+	"postCreateCommand": "minikube start && kubectl version && cd kubebuilder && make install",
 
 	// Use 'postStartCommand' to run commands after the container is created like starting minikube.
-	// "postStartCommand": [
-	// 	"minikube start",
-	// 	"kubectl version"
-	// ]
+	"postStartCommand": "minikube start && kubectl version && kubectl proxy --port=8443"
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
