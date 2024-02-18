@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: kubebuilder
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: kubebuilder
-  name: polaris-sample
+  name: polaris-00000001
 spec:
   id: "00000001"
   size: xs

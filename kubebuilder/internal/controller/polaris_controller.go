@@ -193,6 +193,9 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	if err != nil {
 		return fmt.Errorf("failed to list persistent volume claims: %w", err)
 	}
+	if len(pvcs.Items) == 0 {
+		return fmt.Errorf("no persistent volume claims found")
+	}
 
 	// Get the state of the pvc.
 	var pvc *apiv1.PersistentVolumeClaim = &pvcs.Items[0]
@@ -203,6 +206,9 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	err = r.List(ctx, pods, client.InNamespace(polaris.Namespace), client.MatchingLabels{"id": polaris.Spec.Id})
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
+	}
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("no pods found")
 	}
 
 	// Get the state of the pod.
