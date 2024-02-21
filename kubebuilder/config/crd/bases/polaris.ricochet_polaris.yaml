@@ -1,0 +1,117 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: polaris.polaris.ricochet
+spec:
+  group: polaris.ricochet
+  names:
+    kind: Polaris
+    listKind: PolarisList
+    plural: polaris
+    singular: polaris
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Polaris is the Schema for the polaris API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PolarisSpec defines the desired state of Polaris
+            properties:
+              game:
+                description: The game and modloader to be used for the server.
+                properties:
+                  modLoader:
+                    default: vanilla
+                    description: |-
+                      The software used to load mods into the game server.
+                      Vanilla will launch the game server as default without any mods.
+                    type: string
+                  name:
+                    description: The name of the game type to be created.
+                    type: string
+                required:
+                - name
+                type: object
+              id:
+                description: The unique identifier of the game server instance.
+                type: string
+              name:
+                default: Hyperborea
+                description: The name of the server.
+                type: string
+              network:
+                description: The network configuration for the server.
+                properties:
+                  type:
+                    description: The type of network to be used for the server.
+                    enum:
+                    - public
+                    - private
+                    type: string
+                type: object
+              size:
+                default: xs
+                description: |-
+                  This changes the resources given to the server and the player limit.
+                  Valid values are: xs, s, m, l, xl
+                enum:
+                - xs
+                - s
+                - m
+                - l
+                - xl
+                type: string
+            required:
+            - game
+            - id
+            type: object
+          status:
+            description: PolarisStatus defines the observed state of Polaris
+            properties:
+              state:
+                description: |-
+                  PolarisState defines the current operating condition of the server.
+                  Only one of the following states may be specified.
+                enum:
+                - creating
+                - starting
+                - running
+                - stopping
+                - stopped
+                - deleting
+                - failed
+                type: string
+            required:
+            - state
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

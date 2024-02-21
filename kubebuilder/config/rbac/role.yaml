@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - polaris.ricochet
+  resources:
+  - polaris
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - polaris.ricochet
+  resources:
+  - polaris/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - polaris.ricochet
+  resources:
+  - polaris/status
+  verbs:
+  - get
+  - patch
+  - update

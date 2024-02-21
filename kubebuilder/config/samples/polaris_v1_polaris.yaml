@@ -1,0 +1,21 @@
+apiVersion: polaris.ricochet/v1
+kind: Polaris
+metadata:
+  labels:
+    app.kubernetes.io/name: polaris
+    app.kubernetes.io/instance: polaris-sample
+    app.kubernetes.io/part-of: kubebuilder
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubebuilder
+  name: polaris-00000001
+spec:
+  id: "00000001"
+  size: xs
+  # name: Ricochet
+
+  game:
+    name: minecraft_java
+    modLoader: vanilla
+  
+  network:
+    type: private
