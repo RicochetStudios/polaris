@@ -57,11 +57,11 @@
 	// "forwardPorts": [],
 
 	// Start minikube and install crds.
-	"postCreateCommand": "cd kubebuilder && minikube start && make install && kubectl version",
+	"postCreateCommand": "minikube start && make install && kubectl version",
 
 	// Start the controller, then serve the apiserver on port 8443, which will autoforward to the local machine.
 	// This can be used to access the k8s apiserver from the host machine.
-	"postStartCommand": "cd kubebuilder && minikube start && kubectl version && kubectl proxy --port=8443"
+	"postStartCommand": "minikube start && kubectl version && kubectl proxy --port=8443"
 	// Use `make run` after this to start the controller.
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
