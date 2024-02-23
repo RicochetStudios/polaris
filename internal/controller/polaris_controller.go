@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	polarisv1 "github.com/RicochetStudios/polaris/api/v1"
+	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
 )
 
 // PolarisReconciler reconciles a Polaris object

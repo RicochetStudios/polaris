@@ -138,6 +138,6 @@ type PolarisList struct {
 	Items           []Polaris `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
-}
+// func init() {
+// 	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
+// }

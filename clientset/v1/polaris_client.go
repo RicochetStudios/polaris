@@ -1,14 +1,14 @@
-package clientset
+package v1
 
 import (
 	"context"
 
-	polarisv1 "github.com/RicochetStudios/polaris/api/v1"
+	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"k8s.io/client-go/kubernetes/scheme"
+	"github.com/RicochetStudios/polaris/clientset/scheme"
 	"k8s.io/client-go/rest"
 )
 
@@ -17,13 +17,13 @@ import (
 type PolarisInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*polarisv1.PolarisList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*polarisv1.Polaris, error)
-	Create(ctx context.Context, polaris *polarisv1.Polaris) (*polarisv1.Polaris, error)
+	Create(ctx context.Context, polaris *polarisv1.Polaris, ppts metav1.CreateOptions) (*polarisv1.Polaris, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Update(ctx context.Context, polaris *polarisv1.Polaris) (*polarisv1.Polaris, error)
+	Update(ctx context.Context, polaris *polarisv1.Polaris, opts metav1.UpdateOptions) (*polarisv1.Polaris, error)
 	Delete(ctx context.Context, name string, options metav1.DeleteOptions) (*polarisv1.Polaris, error)
 }
 
-type ExampleInterface interface {
+type PolarisGetter interface {
 	Polaris(namespace string) PolarisInterface
 }
 
@@ -38,7 +38,7 @@ type ExampleClient struct {
 
 func NewForConfig(c *rest.Config) (*ExampleClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &polarisv1.GroupVersion
+	config.ContentConfig.GroupVersion = &polarisv1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
@@ -64,6 +64,7 @@ func (c *polarisClient) List(ctx context.Context, opts metav1.ListOptions) (*pol
 		Get().
 		Namespace(c.ns).
 		Resource("polaris").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(&result)
 
@@ -84,12 +85,13 @@ func (c *polarisClient) Get(ctx context.Context, name string, opts metav1.GetOpt
 	return &result, err
 }
 
-func (c *polarisClient) Create(ctx context.Context, polaris *polarisv1.Polaris) (*polarisv1.Polaris, error) {
+func (c *polarisClient) Create(ctx context.Context, polaris *polarisv1.Polaris, opts metav1.CreateOptions) (*polarisv1.Polaris, error) {
 	result := polarisv1.Polaris{}
 	err := c.restClient.
 		Post().
 		Namespace(c.ns).
 		Resource("polaris").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(polaris).
 		Do(ctx).
 		Into(&result)
@@ -106,12 +108,13 @@ func (c *polarisClient) Watch(ctx context.Context, opts metav1.ListOptions) (wat
 		Watch(ctx)
 }
 
-func (c *polarisClient) Update(ctx context.Context, polaris *polarisv1.Polaris) (*polarisv1.Polaris, error) {
+func (c *polarisClient) Update(ctx context.Context, polaris *polarisv1.Polaris, opts metav1.UpdateOptions) (*polarisv1.Polaris, error) {
 	result := polarisv1.Polaris{}
 	err := c.restClient.
 		Put().
 		Namespace(c.ns).
 		Resource("polaris").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Name(polaris.Name).
 		Body(polaris).
 		Do(ctx).

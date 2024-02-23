@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	polarisv1 "github.com/RicochetStudios/polaris/api/v1"
+	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
 )
 
 var _ = Describe("Polaris Controller", func() {
