@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,10 +81,6 @@ const (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Polaris object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
@@ -102,16 +99,20 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return reconcile.Result{}, fmt.Errorf("failed to get polaris: %w", err)
 	}
 
+	// Update the status of the Polaris instance.
+	if err := r.setCurrentState(ctx, polaris, l); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set polaris state: %w", err)
+	}
+
 	// Remove the finalizer and return before running any reconciles.
 	// This is done to prevent reconcile functions from running when the polaris spec is empty.
-	ispolarisMarkedToBeDeleted := polaris.GetDeletionTimestamp() != nil
-	if ispolarisMarkedToBeDeleted {
+	if polaris.GetDeletionTimestamp() != nil {
 		l.Info("Polaris is being deleted")
 		if controllerutil.ContainsFinalizer(polaris, polarisFinalizer) {
-			// Run logic to perform before deleting the polaris instance.
-			if err := r.finalizePolaris(ctx, polaris, l); err != nil {
-				return ctrl.Result{}, err
-			}
+			// // Run logic to perform before deleting the polaris instance.
+			// if err := r.finalizePolaris(ctx, polaris, l); err != nil {
+			// 	return ctrl.Result{}, err
+			// }
 
 			l.Info("Polaris finalizer found, removing")
 			controllerutil.RemoveFinalizer(polaris, polarisFinalizer)
@@ -129,7 +130,7 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// this is a nice place to tell the operator that the high level,
 		// multi-reconcile operation is underway.
 		l.Info("ensuring Polaris is set up")
-		polaris.Status.State = polarisv1.PolarisStateCreating
+		polaris.Status.State = polarisv1.PolarisStateProvisioning
 		if err = r.Status().Update(ctx, polaris); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update polaris status: %w", err)
 		}
@@ -140,33 +141,9 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// Get the schema for the specified game name.
-	s, err := registry.GetSchema(polaris.Spec.Game.Name)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	l.Info("Got schema for game " + s.Name)
-
-	// Create the persistent volume claims for the server.
-	for _, v := range s.Volumes {
-		if err := r.reconcilePvc(ctx, polaris, v, req, l); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, polaris, s, req, l); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Create the service for the server.
-	if err := r.reconcileService(ctx, polaris, s, req, l); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Update the status of the Polaris instance.
-	if err := r.setCurrentState(ctx, polaris, l); err != nil {
-		return ctrl.Result{}, err
+	// Run logic to perform before setting up the polaris instance.
+	if err = r.maybeProvisionPolaris(ctx, polaris, req, l); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to privision polaris: %w", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -187,14 +164,21 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 		return fmt.Errorf("failed to update polaris status: %w", err)
 	}
 
+	// Define the empty states, where it's possible sub resources don't exist.
+	emptyStates := []polarisv1.PolarisState{polarisv1.PolarisStateDeleting, polarisv1.PolarisStateUnknown}
+
 	// Get the persistent volume claims for the server.
 	pvcs := &apiv1.PersistentVolumeClaimList{}
 	err = r.List(ctx, pvcs, client.InNamespace(polaris.Namespace))
 	if err != nil {
 		return fmt.Errorf("failed to list persistent volume claims: %w", err)
-	}
-	if len(pvcs.Items) == 0 {
+	} else if len(pvcs.Items) == 0 && !slices.Contains(emptyStates, polarisv1.PolarisState(polaris.Status.State)) {
+		// If no pvcs are found outside of the empty states, return an error.
 		return fmt.Errorf("no persistent volume claims found")
+	} else if len(pvcs.Items) == 0 {
+		// If no pvcs are found duing empty states, set the state to provisioning.
+		polaris.Status.State = polarisv1.PolarisStateProvisioning
+		return nil
 	}
 
 	// Get the state of the pvc.
@@ -206,9 +190,13 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	err = r.List(ctx, pods, client.InNamespace(polaris.Namespace), client.MatchingLabels{"id": polaris.Spec.Id})
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
-	}
-	if len(pods.Items) == 0 {
+	} else if len(pods.Items) == 0 && !slices.Contains(emptyStates, polarisv1.PolarisState(polaris.Status.State)) {
+		// If no pods are found outside of the empty states, return an error.
 		return fmt.Errorf("no pods found")
+	} else if len(pods.Items) == 0 {
+		// If no pods are found duing empty states, set the state to provisioning.
+		polaris.Status.State = polarisv1.PolarisStateProvisioning
+		return nil
 	}
 
 	// Get the state of the pod.
@@ -219,7 +207,11 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	if pvcStatus == apiv1.ClaimBound && podStatus == apiv1.PodRunning {
 		polaris.Status.State = polarisv1.PolarisStateRunning
 	} else if pvcStatus == apiv1.ClaimPending || podStatus == apiv1.PodPending {
-		polaris.Status.State = polarisv1.PolarisStateCreating
+		// If any sub resource is pending, set the state to creating.
+		polaris.Status.State = polarisv1.PolarisStateProvisioning
+	} else if polaris.DeletionTimestamp != nil {
+		// If the polaris is marked for deletion, set the state to deleting.
+		polaris.Status.State = polarisv1.PolarisStateDeleting
 	} else if pvcStatus == apiv1.ClaimLost || podStatus == apiv1.PodFailed {
 		polaris.Status.State = polarisv1.PolarisStateFailed
 		// define some unique error messages for the different failure states
@@ -233,11 +225,44 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	return nil
 }
 
-// finalizePolaris runs logic to perform before deleting the polaris instance.
-func (r *PolarisReconciler) finalizePolaris(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
-	polaris.Status.State = polarisv1.PolarisStateDeleting
-	if err := r.Update(ctx, polaris); err != nil {
-		return fmt.Errorf("failed to update polaris status: %w", err)
+// // finalizePolaris runs logic to perform before deleting the polaris instance.
+// func (r *PolarisReconciler) finalizePolaris(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
+// 	polaris.Status.State = polarisv1.PolarisStateDeleting
+// 	if err := r.Update(ctx, polaris); err != nil {
+// 		return fmt.Errorf("failed to update polaris status: %w", err)
+// 	}
+
+// 	return nil
+// }
+
+func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *polarisv1.Polaris, req ctrl.Request, l logr.Logger) error {
+	// Get the schema for the specified game name.
+	s, err := registry.GetSchema(polaris.Spec.Game.Name)
+	if err != nil {
+		return err
+	}
+	l.Info("Got schema for game " + s.Name)
+
+	// Create the persistent volume claims for the server.
+	for _, v := range s.Volumes {
+		if err := r.reconcilePvc(ctx, polaris, v, req, l); err != nil {
+			return err
+		}
+	}
+
+	// Create the statefulset for the server.
+	if err := r.reconcileStatefulSet(ctx, polaris, s, req, l); err != nil {
+		return err
+	}
+
+	// Create the service for the server.
+	if err := r.reconcileService(ctx, polaris, s, req, l); err != nil {
+		return err
+	}
+
+	// Update the status of the Polaris instance.
+	if err := r.setCurrentState(ctx, polaris, l); err != nil {
+		return err
 	}
 
 	return nil

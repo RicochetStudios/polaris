@@ -99,13 +99,14 @@ spec:
                   PolarisState defines the current operating condition of the server.
                   Only one of the following states may be specified.
                 enum:
-                - creating
+                - provisioning
                 - starting
                 - running
                 - stopping
                 - stopped
                 - deleting
                 - failed
+                - ""
                 type: string
             required:
             - state
