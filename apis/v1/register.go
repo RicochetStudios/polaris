@@ -45,6 +45,7 @@ var (
 
 	GlobalScheme *runtime.Scheme
 
+	// Old stuff from kubebuilder.
 	// // GroupVersion is group version used to register these objects
 	// GroupVersion = schema.GroupVersion{Group: "polaris.ricochet", Version: "v1"}
 
