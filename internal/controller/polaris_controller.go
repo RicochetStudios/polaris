@@ -165,7 +165,7 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 	}
 
 	// Define the empty states, where it's possible sub resources don't exist.
-	emptyStates := []polarisv1.PolarisState{polarisv1.PolarisStateDeleting, polarisv1.PolarisStateUnknown}
+	emptyStates := []polarisv1.PolarisState{polarisv1.PolarisStateDeleting, polarisv1.PolarisStateUnknown, polarisv1.PolarisStateProvisioning}
 
 	// Get the persistent volume claims for the server.
 	pvcs := &apiv1.PersistentVolumeClaimList{}
