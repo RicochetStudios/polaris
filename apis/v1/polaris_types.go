@@ -95,17 +95,18 @@ type PolarisSpec struct {
 
 // PolarisState defines the current operating condition of the server.
 // Only one of the following states may be specified.
-// +kubebuilder:validation:Enum=creating;starting;running;stopping;stopped;deleting;failed
+// +kubebuilder:validation:Enum=provisioning;starting;running;stopping;stopped;deleting;failed;""
 type PolarisState string
 
 const (
-	PolarisStateCreating PolarisState = "creating"
-	PolarisStateStarting PolarisState = "starting"
-	PolarisStateRunning  PolarisState = "running"
-	PolarisStateStopping PolarisState = "stopping"
-	PolarisStateStopped  PolarisState = "stopped"
-	PolarisStateDeleting PolarisState = "deleting"
-	PolarisStateFailed   PolarisState = "failed"
+	PolarisStateProvisioning PolarisState = "provisioning"
+	PolarisStateStarting     PolarisState = "starting"
+	PolarisStateRunning      PolarisState = "running"
+	PolarisStateStopping     PolarisState = "stopping"
+	PolarisStateStopped      PolarisState = "stopped"
+	PolarisStateDeleting     PolarisState = "deleting"
+	PolarisStateFailed       PolarisState = "failed"
+	PolarisStateUnknown      PolarisState = ""
 )
 
 // PolarisStatus defines the observed state of Polaris
@@ -138,6 +139,6 @@ type PolarisList struct {
 	Items           []Polaris `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
-}
+// func init() {
+// 	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
+// }

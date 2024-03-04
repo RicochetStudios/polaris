@@ -34,8 +34,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	polarisv1 "ricochet/polaris/api/v1"
-	"ricochet/polaris/internal/controller"
+	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
+	"github.com/RicochetStudios/polaris/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 

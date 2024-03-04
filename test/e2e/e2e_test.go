@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"ricochet/polaris/test/utils"
+	"github.com/RicochetStudios/polaris/test/utils"
 )
 
 const namespace = "kubebuilder-system"

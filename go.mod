@@ -1,4 +1,4 @@
-module ricochet/polaris
+module github.com/RicochetStudios/polaris
 
 go 1.21.5
 

@@ -1,14 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/kubernetes-helm-minikube
 {
-	"name": "Full - K8:Go:Pwsh",
+	"name": "k8s-go",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
 
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
-			"enableNonRootDocker": "true",
-			"moby": "true"
+			"version": "latest"
 		},
 		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
 			"version": "latest",
@@ -17,51 +16,61 @@
 		},
 		"ghcr.io/devcontainers/features/go:1": {
 			"version": "latest"
-		},
-		"ghcr.io/devcontainers/features/powershell:1": {
-			"version": "latest",
-			"modules": [
-				"Terminal-Icons"
-			]
-		},
-		"ghcr.io/devcontainers/features/github-cli:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-contrib/features/act:1": {
-			"version": "latest"
 		}
 	},
 	
 	"customizations": {
 		"vscode": {
 			"settings": {
-				"git.path": "/usr/bin/git"
+				// Git settings.
+				"git.path": "/usr/bin/git",
+				"git.autofetch": true,
+				"git.confirmSync": false,
+
+				// Helps with some annoying warnings in vscode-icons.
+				"workbench.iconTheme": "vscode-icons",
+				"vsicons.dontShowNewVersionMessage": true,
+
+				// Set tab seize to common default.
+				"editor.tabSize": 4,
+
+				// Only enable cSpell in markdown files.
+				"cSpell.enabledLanguageIds": [
+					"markdown"
+				],
+
+				// Turn off telemetry.
+				"telemetry.enableTelemetry": false,
+				"redhat.telemetry.enabled": false
 			},
 			"extensions": [
 				"github.vscode-github-actions",
 				"eamodio.gitlens",
-				"ms-azuretools.vscode-docker",
 				"golang.go",
 				"ms-kubernetes-tools.vscode-kubernetes-tools",
 				"DavidAnson.vscode-markdownlint",
-				"ms-vscode.powershell",
-				"esbenp.prettier-vscode",
 				"redhat.vscode-yaml",
 				"vscode-icons-team.vscode-icons",
-				"ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools",
+				"streetsidesoftware.code-spell-checker"
 			]
 		}
 	},
+
+	// Allow full access to host network.
+	"runArgs": [
+		"--network=host"
+	],
 	
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Start minikube and install crds.
-	"postCreateCommand": "cd kubebuilder && minikube start && make install && kubectl version",
+	"postCreateCommand": "minikube start && make install && kubectl version",
 
 	// Start the controller, then serve the apiserver on port 8443, which will autoforward to the local machine.
 	// This can be used to access the k8s apiserver from the host machine.
-	"postStartCommand": "cd kubebuilder && minikube start && kubectl version && kubectl proxy --port=8443"
+	"postStartCommand": "minikube start && kubectl version && kubectl proxy --port=8443"
 	// Use `make run` after this to start the controller.
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
