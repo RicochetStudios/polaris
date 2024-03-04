@@ -125,6 +125,7 @@ var _ = Describe("Polaris Controller", func() {
 				return fetchedUpdated.Spec.Name == updatedName
 			}, timeout, interval).Should(BeTrue())
 
+			// TODO: Fix this test
 			// This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
 			// By("Running the Polaris instance successfully")
 			// // It can take some time for the Polaris instance to be running.
