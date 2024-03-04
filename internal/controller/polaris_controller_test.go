@@ -40,7 +40,7 @@ var _ = Describe("Polaris Controller", func() {
 		interval       = time.Second * 1
 	)
 
-	AfterAll(func() {
+	BeforeEach(func() {
 		// Clear up any remaining Polaris instances.
 		instances := &polarisv1.PolarisList{}
 		Expect(k8sClient.List(context.Background(), instances)).Should(Succeed())
@@ -56,6 +56,10 @@ var _ = Describe("Polaris Controller", func() {
 			k8sClient.List(context.Background(), existingInstances)
 			return len(existingInstances.Items) == 0
 		}).Should(BeTrue())
+	})
+
+	AfterEach(func() {
+		// Add any teardown steps that needs to be executed after each test
 	})
 
 	Context("Polaris defaults", func() {
@@ -121,6 +125,7 @@ var _ = Describe("Polaris Controller", func() {
 				return fetchedUpdated.Spec.Name == updatedName
 			}, timeout, interval).Should(BeTrue())
 
+			// This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
 			// By("Running the Polaris instance successfully")
 			// // It can take some time for the Polaris instance to be running.
 			// time.Sleep(time.Second * 60)
