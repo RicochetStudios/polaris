@@ -8,7 +8,7 @@ require (
 	github.com/RicochetStudios/registry v1.0.6
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.16.0
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/gomega v1.31.1
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
