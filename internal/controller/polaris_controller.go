@@ -142,7 +142,7 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Run logic to perform before setting up the polaris instance.
-	if err = r.maybeProvisionPolaris(ctx, polaris, req, l); err != nil {
+	if err = r.maybeProvisionPolaris(ctx, polaris, l); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to privision polaris: %w", err)
 	}
 
@@ -235,7 +235,7 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 // 	return nil
 // }
 
-func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *polarisv1.Polaris, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
 	// Get the schema for the specified game name.
 	s, err := registry.GetSchema(polaris.Spec.Game.Name)
 	if err != nil {
