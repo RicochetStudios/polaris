@@ -142,7 +142,7 @@ func (r *PolarisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Run logic to perform before setting up the polaris instance.
-	if err = r.maybeProvisionPolaris(ctx, polaris, req, l); err != nil {
+	if err = r.maybeProvisionPolaris(ctx, polaris, l); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to privision polaris: %w", err)
 	}
 
@@ -235,7 +235,7 @@ func (r *PolarisReconciler) setCurrentState(ctx context.Context, polaris *polari
 // 	return nil
 // }
 
-func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *polarisv1.Polaris, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *polarisv1.Polaris, l logr.Logger) error {
 	// Get the schema for the specified game name.
 	s, err := registry.GetSchema(polaris.Spec.Game.Name)
 	if err != nil {
@@ -245,18 +245,18 @@ func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *
 
 	// Create the persistent volume claims for the server.
 	for _, v := range s.Volumes {
-		if err := r.reconcilePvc(ctx, polaris, v, req, l); err != nil {
+		if err := r.reconcilePvc(ctx, polaris, v, l); err != nil {
 			return err
 		}
 	}
 
 	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, polaris, s, req, l); err != nil {
+	if err := r.reconcileStatefulSet(ctx, polaris, s, l); err != nil {
 		return err
 	}
 
 	// Create the service for the server.
-	if err := r.reconcileService(ctx, polaris, s, req, l); err != nil {
+	if err := r.reconcileService(ctx, polaris, s, l); err != nil {
 		return err
 	}
 
@@ -269,7 +269,7 @@ func (r *PolarisReconciler) maybeProvisionPolaris(ctx context.Context, polaris *
 }
 
 // reconcileStatefulSet reconciles the statefulset for the server.
-func (r *PolarisReconciler) reconcileStatefulSet(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcileStatefulSet(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, l logr.Logger) error {
 	// Create the volumes.
 	volumes := []apiv1.Volume{}
 	for _, v := range s.Volumes {
@@ -491,7 +491,7 @@ func toVolumeMount(i *polarisv1.Polaris, v registry.Volume) apiv1.VolumeMount {
 }
 
 // reconcilePvc reconciles the persistent volume claim for the server.
-func (r *PolarisReconciler) reconcilePvc(ctx context.Context, polaris *polarisv1.Polaris, v registry.Volume, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcilePvc(ctx context.Context, polaris *polarisv1.Polaris, v registry.Volume, l logr.Logger) error {
 	// Define the name of the persistent volume claim.
 	pvcName := v.Name + "-" + polaris.Name
 
@@ -540,7 +540,7 @@ func (r *PolarisReconciler) reconcilePvc(ctx context.Context, polaris *polarisv1
 }
 
 // reconcileService reconciles the service for the server.
-func (r *PolarisReconciler) reconcileService(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, req ctrl.Request, l logr.Logger) error {
+func (r *PolarisReconciler) reconcileService(ctx context.Context, polaris *polarisv1.Polaris, s registry.Schema, l logr.Logger) error {
 	// Create the servicePorts.
 	servicePorts := []apiv1.ServicePort{}
 	for _, n := range s.Network {

@@ -1,114 +1,48 @@
-# kubebuilder
-// TODO(user): Add simple overview of use/purpose
+# Polaris
+
+A Kubernetes operator for deploying dedicated video game servers.
+
+Games available to host can be found in the [registry](https://github.com/RicochetStudios/registry).
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
 
-## Getting Started
+Bringing dedicated video game servers to the Kubernetes ecosystem.
 
-### Prerequisites
+Running game servers in containers is already useful for consistency and efficiency.
+This project takes things a step further by allowing the servers to be managed by an orchestrator.
+
+In doing so, we can reap some of the benefits already built into Kubernetes:
+
+- Isolation - servers cannot access other instances
+- Self healing - if a failure occurs, servers automatically recover and resume within minutes
+- Platform agnostic - runs anywhere Kubernetes can; on any cloud
+
+Not every Kubernetes component can be leveraged however, since game servers aren't compatible with some.
+Dedicated servers cannot have replicas, so cannot be highly available.
+
+We believe that the benefits vastly outweigh the could have been's.
+
+## Supported versions
+
 - go version v1.21.0+
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
-
-```sh
-make docker-build docker-push IMG=<some-registry>/kubebuilder:tag
-```
-
-**NOTE:** This image ought to be published in the personal registry you specified. 
-And it is required to have access to pull the image from the working environment. 
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
-
-```sh
-make install
-```
-
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
-make deploy IMG=<some-registry>/kubebuilder:tag
-```
-
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin 
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
-```
-
-**Delete the APIs(CRDs) from the cluster:**
-
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following are the steps to build the installer and distribute this project to users.
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/kubebuilder:tag
-```
-
-NOTE: The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without
-its dependencies.
-
-2. Using the installer
-
-Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/kubebuilder/<tag or branch>/dist/install.yaml
-```
-
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+Rules for contributing to this repository.
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+We use [VS Code](https://code.visualstudio.com/) as our IDE and [Dev Containers](https://containers.dev/) to standardize our local environments.
 
-## License
+### Prerequisites
 
-Copyright 2024.
+- [VS Code](https://code.visualstudio.com/download)
+- [VS Code Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers#installation)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+### Steps
 
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+1. Press `F1` to open the command palette.
+1. Select `Dev Containers: Clone Repository in Container Volume...`.
+1. Select or enter the [url for this repository](https://github.com/RicochetStudios/polaris.git).
+1. Select the `main` branch.
