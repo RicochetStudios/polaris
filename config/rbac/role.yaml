@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - polaris.ricochet
   resources:
-  - polaris
+  - servers
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - polaris.ricochet
   resources:
-  - polaris/finalizers
+  - servers/finalizers
   verbs:
   - update
 - apiGroups:
   - polaris.ricochet
   resources:
-  - polaris/status
+  - servers/status
   verbs:
   - get
   - patch

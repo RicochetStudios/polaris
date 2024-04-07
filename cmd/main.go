@@ -34,8 +34,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
-	"github.com/RicochetStudios/polaris/internal/controller"
+	polarisv1alpha1 "ricochet/polaris/apis/v1alpha1"
+	"ricochet/polaris/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,7 +47,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(polarisv1.AddToScheme(scheme))
+	utilruntime.Must(polarisv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -76,7 +76,7 @@ func main() {
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
-	// prevent from being vulnerable to the HTTP/2 Stream Cancelation and
+	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
 	// Rapid Reset CVEs. For more information see:
 	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
 	// - https://github.com/advisories/GHSA-4374-p667-p6c8
@@ -122,11 +122,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.PolarisReconciler{
+	if err = (&controller.ServerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Polaris")
+		setupLog.Error(err, "unable to create controller", "controller", "Server")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

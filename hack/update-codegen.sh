@@ -116,14 +116,14 @@ set -o pipefail
 #   --apply-configuration-package "${APIS_PKG}/apis/applyconfiguration" \
 #   ${COMMON_FLAGS}
 
-readonly REPO="github.com/RicochetStudios/polaris"
+readonly REPO="ricochet/polaris"
 readonly APIS_DIR="apis"
 
 go run k8s.io/code-generator/cmd/client-gen \
     --go-header-file ./hack/boilerplate.go.txt \
     --clientset-name clientset \
     --input-base '' \
-    --input "${REPO}/${APIS_DIR}/v1" \
+    --input "${REPO}/${APIS_DIR}/v1alpha1" \
     --output-base pkg/ \
     --output-package "${REPO}/pkg/" \
     --trim-path-prefix "pkg/${REPO}/"

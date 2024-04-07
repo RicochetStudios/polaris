@@ -26,13 +26,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	polarisv1 "github.com/RicochetStudios/polaris/apis/v1"
+	polarisv1alpha1 "ricochet/polaris/apis/v1alpha1"
 )
 
-var _ = Describe("Polaris Controller", func() {
+var _ = Describe("Server Controller", func() {
 
 	const (
-		polarisName      = "polaris-00000001"
+		polarisName      = "server-00000001"
 		polarisNamespace = "default"
 
 		timeout        = time.Second * 30
@@ -41,8 +41,8 @@ var _ = Describe("Polaris Controller", func() {
 	)
 
 	BeforeEach(func() {
-		// Clear up any remaining Polaris instances.
-		instances := &polarisv1.PolarisList{}
+		// Clear up any remaining server instances.
+		instances := &polarisv1alpha1.ServerList{}
 		Expect(k8sClient.List(context.Background(), instances)).Should(Succeed())
 
 		for _, i := range instances.Items {
@@ -52,7 +52,7 @@ var _ = Describe("Polaris Controller", func() {
 		}
 
 		Eventually(func() bool {
-			existingInstances := &polarisv1.PolarisList{}
+			existingInstances := &polarisv1alpha1.ServerList{}
 			k8sClient.List(context.Background(), existingInstances)
 			return len(existingInstances.Items) == 0
 		}).Should(BeTrue())
@@ -62,18 +62,18 @@ var _ = Describe("Polaris Controller", func() {
 		// Add any teardown steps that needs to be executed after each test
 	})
 
-	Context("Polaris defaults", func() {
+	Context("Server defaults", func() {
 		It("Should handle default fields correctly", func() {
-			spec := polarisv1.PolarisSpec{
+			spec := polarisv1alpha1.ServerSpec{
 				Id:   "00000001",
 				Size: "xs",
 				Name: "hyperborea",
-				Game: polarisv1.Game{
+				Game: polarisv1alpha1.Game{
 					Name:      "minecraft_java",
 					ModLoader: "vanilla",
 				},
-				Network: polarisv1.Network{
-					Type: polarisv1.NetworkType("public"),
+				Network: polarisv1alpha1.Network{
+					Type: polarisv1alpha1.NetworkType("public"),
 				},
 			}
 
@@ -82,7 +82,7 @@ var _ = Describe("Polaris Controller", func() {
 				Namespace: polarisNamespace,
 			}
 
-			toCreate := &polarisv1.Polaris{
+			toCreate := &polarisv1alpha1.Server{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      key.Name,
 					Namespace: key.Namespace,
@@ -90,36 +90,36 @@ var _ = Describe("Polaris Controller", func() {
 				Spec: spec,
 			}
 
-			By("Creating the Polaris instance successfully")
+			By("Creating the server instance successfully")
 			Expect(k8sClient.Create(context.Background(), toCreate)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &polarisv1.Polaris{}
+			fetched := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
 				k8sClient.Get(context.Background(), key, fetched)
-				return fetched.Status.State == polarisv1.PolarisStateProvisioning
+				return fetched.Status.State == polarisv1alpha1.ServerStateProvisioning
 			}, timeout, interval).Should(BeTrue())
 
-			By("Updating Polaris successfully")
+			By("Updating server successfully")
 			updatedName := "ravenholm"
 
-			updateSpec := polarisv1.PolarisSpec{
+			updateSpec := polarisv1alpha1.ServerSpec{
 				Id:   "00000001",
 				Size: "xs",
 				Name: updatedName,
-				Game: polarisv1.Game{
+				Game: polarisv1alpha1.Game{
 					Name:      "minecraft_java",
 					ModLoader: "vanilla",
 				},
-				Network: polarisv1.Network{
-					Type: polarisv1.NetworkType("public"),
+				Network: polarisv1alpha1.Network{
+					Type: polarisv1alpha1.NetworkType("public"),
 				},
 			}
 
 			fetched.Spec = updateSpec
 
 			Expect(k8sClient.Update(context.Background(), fetched)).Should(Succeed())
-			fetchedUpdated := &polarisv1.Polaris{}
+			fetchedUpdated := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
 				k8sClient.Get(context.Background(), key, fetchedUpdated)
 				return fetchedUpdated.Spec.Name == updatedName
@@ -127,24 +127,24 @@ var _ = Describe("Polaris Controller", func() {
 
 			// TODO: Fix this test
 			// This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
-			// By("Running the Polaris instance successfully")
-			// // It can take some time for the Polaris instance to be running.
+			// By("Provisioning the server instance successfully")
+			// // It can take some time for the server to be running.
 			// time.Sleep(time.Second * 60)
 
 			// Eventually(func() bool {
 			// 	k8sClient.Get(context.Background(), key, fetchedUpdated)
-			// 	return fetchedUpdated.Status.State == polarisv1.PolarisStateRunning
+			// 	return fetchedUpdated.Status.State == polarisv1alpha1.ServerStateRunning
 			// }, runningTimeout, interval).Should(BeTrue())
 
-			By("Deleting the Polaris instance successfully")
+			By("Deleting the server successfully")
 			Eventually(func() error {
-				f := &polarisv1.Polaris{}
+				f := &polarisv1alpha1.Server{}
 				k8sClient.Get(context.Background(), key, f)
 				return k8sClient.Delete(context.Background(), f)
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func() error {
-				f := &polarisv1.Polaris{}
+				f := &polarisv1alpha1.Server{}
 				return k8sClient.Get(context.Background(), key, f)
 			}, timeout, interval).ShouldNot(Succeed())
 		})

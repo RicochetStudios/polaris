@@ -14,14 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Game defines the game and modloader to be used for the server.
+type Game struct {
+	// The name of the game type to be created.
+	Name string `json:"name"`
+
+	// The software used to load mods into the game server.
+	// Vanilla will launch the game server as default without any mods.
+	//
+	// +kubebuilder:default:=vanilla
+	// +optional
+	ModLoader string `json:"modLoader"`
+}
 
 // NetworkType defines the type of network to be used for the server.
 // Only one of the following network types may be specified.
@@ -39,19 +49,6 @@ const (
 	PrivateNetwork NetworkType = "private"
 )
 
-// Game defines the game and modloader to be used for the server.
-type Game struct {
-	// The name of the game type to be created.
-	Name string `json:"name"`
-
-	// The software used to load mods into the game server.
-	// Vanilla will launch the game server as default without any mods.
-	//
-	// +kubebuilder:default:=vanilla
-	// +optional
-	ModLoader string `json:"modLoader"`
-}
-
 // Network defines the network configuration for the server.
 //
 // This defines how the user can connect to the server.
@@ -62,11 +59,8 @@ type Network struct {
 	Type NetworkType `json:"type"`
 }
 
-// PolarisSpec defines the desired state of Polaris
-type PolarisSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
+// ServerSpec defines the desired state of the server.
+type ServerSpec struct {
 	// The unique identifier of the game server instance.
 	Id string `json:"id"`
 
@@ -93,54 +87,51 @@ type PolarisSpec struct {
 	Network Network `json:"network"`
 }
 
-// PolarisState defines the current operating condition of the server.
+// ServerState defines the current operating condition of the server.
 // Only one of the following states may be specified.
 // +kubebuilder:validation:Enum=provisioning;starting;running;stopping;stopped;deleting;failed;""
-type PolarisState string
+type ServerState string
 
 const (
-	PolarisStateProvisioning PolarisState = "provisioning"
-	PolarisStateStarting     PolarisState = "starting"
-	PolarisStateRunning      PolarisState = "running"
-	PolarisStateStopping     PolarisState = "stopping"
-	PolarisStateStopped      PolarisState = "stopped"
-	PolarisStateDeleting     PolarisState = "deleting"
-	PolarisStateFailed       PolarisState = "failed"
-	PolarisStateUnknown      PolarisState = ""
+	ServerStateProvisioning ServerState = "provisioning"
+	ServerStateStarting     ServerState = "starting"
+	ServerStateRunning      ServerState = "running"
+	ServerStateStopping     ServerState = "stopping"
+	ServerStateStopped      ServerState = "stopped"
+	ServerStateDeleting     ServerState = "deleting"
+	ServerStateFailed       ServerState = "failed"
+	ServerStateUnknown      ServerState = ""
 )
 
-// PolarisStatus defines the observed state of Polaris
-type PolarisStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	State PolarisState `json:"state"`
+// ServerStatus defines the observed state of Server
+type ServerStatus struct {
+	State ServerState `json:"state"`
 }
 
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
-// +kubebuilder:resource:scope=Namespaced,shortName=pl,singular=polaris,plural=polaris
+// +kubebuilder:resource:scope=Namespaced,shortName=svr,singular=server
 
-// Polaris is the Schema for the polaris API
-type Polaris struct {
+// Server is the Schema for the servers API
+type Server struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PolarisSpec   `json:"spec,omitempty"`
-	Status PolarisStatus `json:"status,omitempty"`
+	Spec   ServerSpec   `json:"spec,omitempty"`
+	Status ServerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// PolarisList contains a list of Polaris
-type PolarisList struct {
+// ServerList contains a list of Server
+type ServerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Polaris `json:"items"`
+	Items           []Server `json:"items"`
 }
 
-// func init() {
-// 	SchemeBuilder.Register(&Polaris{}, &PolarisList{})
-// }
+func init() {
+	SchemeBuilder.Register(&Server{}, &ServerList{})
+}

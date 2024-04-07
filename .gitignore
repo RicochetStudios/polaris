@@ -1,4 +1,3 @@
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -26,3 +25,5 @@ go.work
 *.swp
 *.swo
 *~
+
+_old/

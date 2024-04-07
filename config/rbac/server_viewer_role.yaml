@@ -1,31 +1,27 @@
-# permissions for end users to edit polaris.
+# permissions for end users to view servers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: polaris-editor-role
+    app.kubernetes.io/instance: server-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: kubebuilder
-    app.kubernetes.io/part-of: kubebuilder
+    app.kubernetes.io/created-by: polaris
+    app.kubernetes.io/part-of: polaris
     app.kubernetes.io/managed-by: kustomize
-  name: polaris-editor-role
+  name: server-viewer-role
 rules:
 - apiGroups:
   - polaris.ricochet
   resources:
-  - polaris
+  - servers
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - polaris.ricochet
   resources:
-  - polaris/status
+  - servers/status
   verbs:
   - get
