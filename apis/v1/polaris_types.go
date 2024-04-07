@@ -117,9 +117,11 @@ type PolarisStatus struct {
 	State PolarisState `json:"state"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +genclient
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+// +kubebuilder:resource:scope=Namespaced,shortName=pl,singular=polaris,plural=polaris
 
 // Polaris is the Schema for the polaris API
 type Polaris struct {
