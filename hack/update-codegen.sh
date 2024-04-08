@@ -64,8 +64,8 @@ readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boi
 # go run k8s.io/code-generator/cmd/openapi-gen \
 #   -O zz_generated.openapi \
 #   --report-filename "${new_report}" \
-#   --output-package "sigs.k8s.io/gateway-api/pkg/generated/openapi" \
-#   --input-dirs "${GATEWAY_INPUT_DIRS}" \
+#   --output-package "${REPO}/pkg/generated/openapi" \
+#   --input-dirs "${INPUT_DIRS}" \
 #   --input-dirs "k8s.io/apimachinery/pkg/apis/meta/v1" \
 #   --input-dirs "k8s.io/apimachinery/pkg/runtime" \
 #   --input-dirs "k8s.io/apimachinery/pkg/version" \
@@ -73,7 +73,7 @@ readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boi
 
 # echo "Generating apply configuration"
 # go run k8s.io/code-generator/cmd/applyconfiguration-gen \
-#   --input-dirs "${GATEWAY_INPUT_DIRS}" \
+#   --input-dirs "${INPUT_DIRS}" \
 #   --openapi-schema <(go run ${SCRIPT_ROOT}/cmd/modelschema) \
 #   --output-package "${APIS_PKG}/apis/applyconfiguration" \
 #   ${COMMON_FLAGS}
