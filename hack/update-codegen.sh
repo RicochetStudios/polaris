@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# Helpful links:
+# https://github.com/kubernetes-sigs/kubebuilder/issues/3795#issuecomment-1959266225
+# https://github.com/kubernetes-sigs/gateway-api/blob/main/hack/update-codegen.sh
+# https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/generating-clientset.md
 
 set -o errexit
 set -o nounset
