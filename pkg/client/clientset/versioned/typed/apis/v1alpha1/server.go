@@ -20,7 +20,7 @@ package v1alpha1
 import (
 	"context"
 	v1alpha1 "ricochet/polaris/apis/v1alpha1"
-	scheme "ricochet/polaris/pkg/clientset/scheme"
+	scheme "ricochet/polaris/pkg/client/clientset/versioned/scheme"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

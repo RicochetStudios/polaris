@@ -18,9 +18,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "ricochet/polaris/pkg/clientset"
-	polarisv1alpha1 "ricochet/polaris/pkg/clientset/typed/apis/v1alpha1"
-	fakepolarisv1alpha1 "ricochet/polaris/pkg/clientset/typed/apis/v1alpha1/fake"
+	clientset "ricochet/polaris/pkg/client/clientset/versioned"
+	polarisv1alpha1 "ricochet/polaris/pkg/client/clientset/versioned/typed/apis/v1alpha1"
+	fakepolarisv1alpha1 "ricochet/polaris/pkg/client/clientset/versioned/typed/apis/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
