@@ -32,7 +32,7 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: apis.GroupName, Version: "v1alpha1"}
 
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "polaris.ricochet", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: apis.GroupName, Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

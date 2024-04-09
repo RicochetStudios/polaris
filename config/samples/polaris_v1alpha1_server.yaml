@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: polaris
     app.kubernetes.io/managed-by: kustomize
-  name: polaris-00000001
+  name: server-00000001
 spec:
   id: "00000001"
   size: xs
