@@ -1,5 +1,5 @@
-apiVersion: polaris.ricochet/v1
-kind: Polaris
+apiVersion: polaris.ricochet/v1alpha1
+kind: Server
 metadata:
   labels:
     app.kubernetes.io/name: polaris
@@ -7,15 +7,15 @@ metadata:
     app.kubernetes.io/part-of: kubebuilder
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: kubebuilder
-  name: polaris-00000001
+  name: server-00000001
 spec:
   id: "00000001"
   size: xs
-  # name: Ricochet
+  # name: Hyperboria
 
   game:
     name: minecraft_java
     modLoader: vanilla
   
   network:
-    type: private
+    type: public

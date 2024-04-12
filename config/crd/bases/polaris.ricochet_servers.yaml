@@ -4,24 +4,26 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: polaris.polaris.ricochet
+  name: servers.polaris.ricochet
 spec:
   group: polaris.ricochet
   names:
-    kind: Polaris
-    listKind: PolarisList
-    plural: polaris
-    singular: polaris
+    kind: Server
+    listKind: ServerList
+    plural: servers
+    shortNames:
+    - svr
+    singular: server
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.state
       name: State
       type: string
-    name: v1
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Polaris is the Schema for the polaris API
+        description: Server is the Schema for the servers API
         properties:
           apiVersion:
             description: |-
@@ -41,7 +43,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: PolarisSpec defines the desired state of Polaris
+            description: ServerSpec defines the desired state of the server.
             properties:
               game:
                 description: The game and modloader to be used for the server.
@@ -92,11 +94,11 @@ spec:
             - id
             type: object
           status:
-            description: PolarisStatus defines the observed state of Polaris
+            description: ServerStatus defines the observed state of Server
             properties:
               state:
                 description: |-
-                  PolarisState defines the current operating condition of the server.
+                  ServerState defines the current operating condition of the server.
                   Only one of the following states may be specified.
                 enum:
                 - provisioning

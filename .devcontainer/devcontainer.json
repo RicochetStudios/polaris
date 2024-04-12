@@ -16,7 +16,8 @@
 		},
 		"ghcr.io/devcontainers/features/go:1": {
 			"version": "latest"
-		}
+		},
+		"ghcr.io/audacioustux/devcontainers/kubebuilder:1": {}
 	},
 	
 	"customizations": {

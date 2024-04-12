@@ -14,19 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
-
-import (
-	"fmt"
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
-// Run e2e tests using the Ginkgo runner.
-func TestE2E(t *testing.T) {
-	RegisterFailHandler(Fail)
-	fmt.Fprintf(GinkgoWriter, "Starting polaris suite\n")
-	RunSpecs(t, "e2e suite")
-}
+// Package v1alpha contains API Schema definitions for the polaris v1 API group.
+//
+// +kubebuilder:object:generate=true
+// +groupName=polaris.ricochet
+package v1alpha1

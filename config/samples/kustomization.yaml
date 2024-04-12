@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-- polaris_v1_polaris.yaml
+- polaris_v1alpha1_server.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
