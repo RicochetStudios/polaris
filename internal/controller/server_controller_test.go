@@ -36,24 +36,26 @@ var _ = Describe("Server Controller", func() {
 		polarisNamespace = "default"
 
 		timeout        = time.Second * 30
-		runningTimeout = time.Second * 300
+		runningTimeout = time.Second * 120
 		interval       = time.Second * 1
 	)
+
+	ctx := context.Background()
 
 	BeforeEach(func() {
 		// Clear up any remaining server instances.
 		instances := &polarisv1alpha1.ServerList{}
-		Expect(k8sClient.List(context.Background(), instances)).Should(Succeed())
+		Expect(k8sClient.List(ctx, instances)).Should(Succeed())
 
 		for _, i := range instances.Items {
 			Eventually(func() error {
-				return k8sClient.Delete(context.Background(), &i)
+				return k8sClient.Delete(ctx, &i)
 			}, timeout, interval).Should(Succeed())
 		}
 
 		Eventually(func() bool {
 			existingInstances := &polarisv1alpha1.ServerList{}
-			k8sClient.List(context.Background(), existingInstances)
+			k8sClient.List(ctx, existingInstances)
 			return len(existingInstances.Items) == 0
 		}).Should(BeTrue())
 	})
@@ -91,12 +93,12 @@ var _ = Describe("Server Controller", func() {
 			}
 
 			By("Creating the server instance successfully")
-			Expect(k8sClient.Create(context.Background(), toCreate)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, toCreate)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
 			fetched := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
-				k8sClient.Get(context.Background(), key, fetched)
+				k8sClient.Get(ctx, key, fetched)
 				return fetched.Status.State == polarisv1alpha1.ServerStateProvisioning
 			}, timeout, interval).Should(BeTrue())
 
@@ -118,34 +120,34 @@ var _ = Describe("Server Controller", func() {
 
 			fetched.Spec = updateSpec
 
-			Expect(k8sClient.Update(context.Background(), fetched)).Should(Succeed())
+			Expect(k8sClient.Update(ctx, fetched)).Should(Succeed())
 			fetchedUpdated := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
-				k8sClient.Get(context.Background(), key, fetchedUpdated)
+				k8sClient.Get(ctx, key, fetchedUpdated)
 				return fetchedUpdated.Spec.Name == updatedName
 			}, timeout, interval).Should(BeTrue())
 
-			// TODO: Fix this test
-			// This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
+			// // TODO: Fix this test
+			// // This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
 			// By("Provisioning the server instance successfully")
 			// // It can take some time for the server to be running.
-			// time.Sleep(time.Second * 60)
+			// time.Sleep(time.Second * 120)
 
 			// Eventually(func() bool {
-			// 	k8sClient.Get(context.Background(), key, fetchedUpdated)
+			// 	k8sClient.Get(ctx, key, fetchedUpdated)
 			// 	return fetchedUpdated.Status.State == polarisv1alpha1.ServerStateRunning
 			// }, runningTimeout, interval).Should(BeTrue())
 
 			By("Deleting the server successfully")
 			Eventually(func() error {
 				f := &polarisv1alpha1.Server{}
-				k8sClient.Get(context.Background(), key, f)
-				return k8sClient.Delete(context.Background(), f)
+				k8sClient.Get(ctx, key, f)
+				return k8sClient.Delete(ctx, f)
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func() error {
 				f := &polarisv1alpha1.Server{}
-				return k8sClient.Get(context.Background(), key, f)
+				return k8sClient.Get(ctx, key, f)
 			}, timeout, interval).ShouldNot(Succeed())
 		})
 	})
