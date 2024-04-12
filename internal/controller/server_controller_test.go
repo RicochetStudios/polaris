@@ -94,11 +94,6 @@ var _ = Describe("Server Controller", func() {
 			By("Creating the server instance successfully")
 			Expect(k8sClient.Create(ctx, toCreate)).Should(Succeed())
 			time.Sleep(time.Second * 5)
-			// Clean up the server instance after the test, even if it fails.
-			defer func() {
-				Expect(k8sClient.Delete(context.Background(), toCreate)).Should(Succeed())
-				time.Sleep(time.Second * 30)
-			}()
 
 			fetched := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
@@ -125,10 +120,10 @@ var _ = Describe("Server Controller", func() {
 			fetched.Spec = updateSpec
 
 			Expect(k8sClient.Update(ctx, fetched)).Should(Succeed())
-			fetchedUpdated := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
-				k8sClient.Get(ctx, key, fetchedUpdated)
-				return fetchedUpdated.Spec.Name == updatedName
+				f := &polarisv1alpha1.Server{}
+				k8sClient.Get(ctx, key, f)
+				return f.Spec.Name == updatedName
 			}, timeout, interval).Should(BeTrueBecause("The spec should reflect the updated name"))
 
 			// We can't actually check if the server is running,
