@@ -35,9 +35,8 @@ var _ = Describe("Server Controller", func() {
 		polarisName      = "server-00000001"
 		polarisNamespace = "default"
 
-		timeout        = time.Second * 30
-		runningTimeout = time.Second * 120
-		interval       = time.Second * 1
+		timeout  = time.Second * 30
+		interval = time.Second * 1
 	)
 
 	ctx := context.Background()
@@ -95,12 +94,17 @@ var _ = Describe("Server Controller", func() {
 			By("Creating the server instance successfully")
 			Expect(k8sClient.Create(ctx, toCreate)).Should(Succeed())
 			time.Sleep(time.Second * 5)
+			// Clean up the server instance after the test, even if it fails.
+			defer func() {
+				Expect(k8sClient.Delete(context.Background(), toCreate)).Should(Succeed())
+				time.Sleep(time.Second * 30)
+			}()
 
 			fetched := &polarisv1alpha1.Server{}
 			Eventually(func() bool {
 				k8sClient.Get(ctx, key, fetched)
 				return fetched.Status.State == polarisv1alpha1.ServerStateProvisioning
-			}, timeout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrueBecause("The server should be provisioning"))
 
 			By("Updating server successfully")
 			updatedName := "ravenholm"
@@ -125,18 +129,10 @@ var _ = Describe("Server Controller", func() {
 			Eventually(func() bool {
 				k8sClient.Get(ctx, key, fetchedUpdated)
 				return fetchedUpdated.Spec.Name == updatedName
-			}, timeout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrueBecause("The spec should reflect the updated name"))
 
-			// // TODO: Fix this test
-			// // This test doesn't succeed at the moment on my local environment. I think it's an issue with my machine.
-			// By("Provisioning the server instance successfully")
-			// // It can take some time for the server to be running.
-			// time.Sleep(time.Second * 120)
-
-			// Eventually(func() bool {
-			// 	k8sClient.Get(ctx, key, fetchedUpdated)
-			// 	return fetchedUpdated.Status.State == polarisv1alpha1.ServerStateRunning
-			// }, runningTimeout, interval).Should(BeTrue())
+			// We can't actually check if the server is running,
+			// since envtest does not run the statefulset controller.
 
 			By("Deleting the server successfully")
 			Eventually(func() error {
