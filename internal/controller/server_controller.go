@@ -60,7 +60,7 @@ const (
 	// The number of seconds to wait before marking a pod as unreachable.
 	//
 	// At 30 seconds, the pod is scheduled to redeploy in 120s total.
-	// statefulSetUnreachableSeconds int64 = 30
+	statefulSetUnreachableSeconds int64 = 30
 
 	// statefulSetImagePullPolicy is the image pull policy to be used for the statefulset.
 	statefulSetImagePullPolicy corev1.PullPolicy = "Always"
@@ -368,15 +368,14 @@ func (r *ServerReconciler) reconcileStatefulSet(ctx context.Context, server *pol
 						},
 					},
 					Tolerations: []corev1.Toleration{
-						// // This is broken. Like me.
-						// // Make pod redeploy faster when running on a risky node.
-						// // Useful for node failures and Azure Spot VMs.
-						// {
-						// 	Key:               "node.kubernetes.io/unreachable",
-						// 	Operator:          corev1.TolerationOpExists,
-						// 	Effect:            corev1.TaintEffectNoExecute,
-						// 	TolerationSeconds: int64Ptr(statefulSetUnreachableSeconds),
-						// },
+						// Make pod redeploy faster when running on a risky node.
+						// Useful for node failures and Azure Spot VMs.
+						{
+							Key:               "node.kubernetes.io/unreachable",
+							Operator:          corev1.TolerationOpExists,
+							Effect:            corev1.TaintEffectNoExecute,
+							TolerationSeconds: int64Ptr(statefulSetUnreachableSeconds),
+						},
 						// Deploy to nodes with matching ratios.
 						{
 							Key:      "server.polaris.ricochet/ratio",
