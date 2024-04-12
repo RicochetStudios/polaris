@@ -61,6 +61,8 @@ fi
 # Always use the boilerplate from the hack directory.
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
+# Get code-generator
+go get k8s.io/code-generator
 
 # # throw away
 # new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
