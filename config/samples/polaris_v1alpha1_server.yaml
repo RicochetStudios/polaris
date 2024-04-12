@@ -3,7 +3,10 @@ kind: Server
 metadata:
   labels:
     app.kubernetes.io/name: polaris
+    app.kubernetes.io/instance: polaris-sample
+    app.kubernetes.io/part-of: kubebuilder
     app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubebuilder
   name: server-00000001
 spec:
   id: "00000001"
@@ -15,4 +18,4 @@ spec:
     modLoader: vanilla
   
   network:
-    type: private
+    type: public
