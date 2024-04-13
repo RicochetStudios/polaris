@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -296,7 +295,7 @@ func (r *ServerReconciler) reconcileStatefulSet(ctx context.Context, server *pol
 
 	// Template settings.
 	for i, setting := range s.Settings {
-		s.Settings[i].Value = templateValue(setting.Value, s, *server)
+		s.Settings[i].Value = registry.TemplateValue(setting.Value, s, server.Spec)
 	}
 
 	// Create the container env vars.
@@ -505,36 +504,6 @@ func (r *ServerReconciler) reconcileService(ctx context.Context, server *polaris
 	}
 
 	return nil
-}
-
-// templateValue takes a value and resolves its template if it is a template.
-func templateValue(v string, s registry.Schema, i polarisv1alpha1.Server) string {
-	// Template the env var if needed.
-	re, err := regexp.Compile(templateRegex)
-	// If the regex is invalid, return an empty string.
-	if err != nil {
-		return ""
-	}
-
-	if re.MatchString(v) {
-		// Get the template to target.
-		matches := re.FindStringSubmatch(v)
-		tplIndex := re.SubexpIndex("tpl")
-		tpl := matches[tplIndex]
-
-		// Resolve the templates.
-		switch tpl {
-		case ".name":
-			return i.Spec.Name
-		case ".modLoader":
-			return i.Spec.Game.ModLoader
-		case ".players":
-			return fmt.Sprint(s.Sizes[i.Spec.Size].Players)
-		}
-	}
-
-	// If it is not a template, return an empty string.
-	return v
 }
 
 // toProbe converts a registry.Probe to a corev1.Probe.
