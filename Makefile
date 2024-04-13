@@ -22,7 +22,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: build
+all: build tidy
 
 ##@ General
 
@@ -59,6 +59,10 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: tidy
+tidy: ## Run go mod tidy.
+	go mod tidy
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
