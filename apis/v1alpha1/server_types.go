@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"net"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,6 +65,11 @@ type Network struct {
 	//
 	// +optional
 	Type NetworkType `json:"type"`
+
+	// The IP address of the server.
+	//
+	// +optional
+	Address net.IP `json:"address"`
 }
 
 // ServerSpec defines the desired state of the server.
