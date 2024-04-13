@@ -25,6 +25,12 @@ type Game struct {
 	// The name of the game type to be created.
 	Name string `json:"name"`
 
+	// The version of the game to be used.
+	//
+	// +kubebuilder:default:=latest
+	// +optional
+	Version string `json:"version"`
+
 	// The software used to load mods into the game server.
 	// Vanilla will launch the game server as default without any mods.
 	//
@@ -57,6 +63,11 @@ type Network struct {
 	//
 	// +optional
 	Type NetworkType `json:"type"`
+
+	// The IP address of the server.
+	//
+	// +optional
+	Address string `json:"address"`
 }
 
 // ServerSpec defines the desired state of the server.

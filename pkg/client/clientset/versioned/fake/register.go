@@ -18,8 +18,7 @@ limitations under the License.
 package fake
 
 import (
-	polarisv1alpha1 "ricochet/polaris/apis/v1alpha1"
-
+	polarisv1alpha1 "github.com/RicochetStudios/polaris/apis/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

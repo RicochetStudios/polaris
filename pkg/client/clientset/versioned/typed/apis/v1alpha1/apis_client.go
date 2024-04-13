@@ -19,9 +19,9 @@ package v1alpha1
 
 import (
 	"net/http"
-	v1alpha1 "ricochet/polaris/apis/v1alpha1"
-	"ricochet/polaris/pkg/client/clientset/versioned/scheme"
 
+	v1alpha1 "github.com/RicochetStudios/polaris/apis/v1alpha1"
+	"github.com/RicochetStudios/polaris/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
