@@ -68,9 +68,6 @@ const (
 	statefulSetRequestResourcesCPU    string = "50m"
 	statefulSetRequestResourcesMemory string = "100Mi"
 
-	// templateRegex is a regular expression to validate templates.
-	templateRegex string = `^{{ (?P<tpl>(\.\w+)*) }}$`
-
 	// finalizer is the finalizer to be used for the instance.
 	serverFinalizer = "server.polaris.ricochet/finalizer"
 )
