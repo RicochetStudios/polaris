@@ -33,7 +33,7 @@ export GOMODCACHE GO111MODULE GOFLAGS GOPATH
 
 
 # Define overall configuration.
-readonly REPO="ricochet/polaris"
+readonly REPO="github.com/RicochetStudios/polaris"
 readonly APIS_DIR="apis"
 # Define the output package for the generated code.
 readonly OUTPUT_PKG="${REPO}/pkg/client"

@@ -20,7 +20,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"ricochet/polaris/apis"
+	"github.com/RicochetStudios/polaris/apis"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"

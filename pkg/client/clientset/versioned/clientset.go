@@ -20,8 +20,8 @@ package versioned
 import (
 	"fmt"
 	"net/http"
-	polarisv1alpha1 "ricochet/polaris/pkg/client/clientset/versioned/typed/apis/v1alpha1"
 
+	polarisv1alpha1 "github.com/RicochetStudios/polaris/pkg/client/clientset/versioned/typed/apis/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
