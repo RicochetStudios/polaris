@@ -67,6 +67,7 @@ readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boi
 new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
 
 echo "Generating openapi schema"
+# God knows what version to use here. I'm just going to use the latest.
 go run k8s.io/kube-openapi/cmd/openapi-gen@latest \
   --output-file zz_generated.openapi.go \
   --report-filename "${new_report}" \
