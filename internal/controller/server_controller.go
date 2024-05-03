@@ -146,6 +146,54 @@ func (r *ServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
+// // finalizeServer runs logic to perform before deleting the server.
+// func (r *ServerReconciler) finalizeServer(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
+// 	server.Status.State = polarisv1alpha1.ServerStateDeleting
+// 	if err := r.Update(ctx, server); err != nil {
+// 		return fmt.Errorf("failed to update server status: %w", err)
+// 	}
+
+// 	return nil
+// }
+
+// maybeProvisionPolaris runs the logic to provision the server.
+func (r *ServerReconciler) maybeProvisionPolaris(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
+	// Get the schema for the specified game name.
+	s, err := registry.GetSchema(server.Spec.Game.Name)
+	if err != nil {
+		return err
+	}
+	l.Info("Got schema for game " + s.Name)
+
+	// Create the persistent volume claims for the server.
+	for _, v := range s.Volumes {
+		if err := r.reconcilePvc(ctx, server, v, l); err != nil {
+			return err
+		}
+	}
+
+	// Create the statefulset for the server.
+	if err := r.reconcileStatefulSet(ctx, server, s, l); err != nil {
+		return err
+	}
+
+	// Create the service for the server.
+	if err := r.reconcileService(ctx, server, s, l); err != nil {
+		return err
+	}
+
+	// Update the status of the server.
+	if err := r.setCurrentState(ctx, server, l); err != nil {
+		return err
+	}
+
+	if err := r.setAddress(ctx, server, l); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // setCurrentState sets the current state of the server.
 // It checks the phase of the persistent volume claim and the pod.
 func (r *ServerReconciler) setCurrentState(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
@@ -226,47 +274,23 @@ func (r *ServerReconciler) setCurrentState(ctx context.Context, server *polarisv
 	return nil
 }
 
-// // finalizeServer runs logic to perform before deleting the server.
-// func (r *ServerReconciler) finalizeServer(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
-// 	server.Status.State = polarisv1alpha1.ServerStateDeleting
-// 	if err := r.Update(ctx, server); err != nil {
-// 		return fmt.Errorf("failed to update server status: %w", err)
-// 	}
-
-// 	return nil
-// }
-
-// maybeProvisionPolaris runs the logic to provision the server.
-func (r *ServerReconciler) maybeProvisionPolaris(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
-	// Get the schema for the specified game name.
-	s, err := registry.GetSchema(server.Spec.Game.Name)
+// setAddress sets the IP address of the server, once the service is available.
+func (r *ServerReconciler) setAddress(ctx context.Context, server *polarisv1alpha1.Server, l logr.Logger) error {
+	// Get the service for the server.
+	service := &corev1.Service{}
+	err := r.Get(ctx, types.NamespacedName{Name: server.Name, Namespace: server.Namespace}, service)
 	if err != nil {
-		return err
-	}
-	l.Info("Got schema for game " + s.Name)
-
-	// Create the persistent volume claims for the server.
-	for _, v := range s.Volumes {
-		if err := r.reconcilePvc(ctx, server, v, l); err != nil {
-			return err
-		}
+		return fmt.Errorf("failed to get service: %w", err)
 	}
 
-	// Create the statefulset for the server.
-	if err := r.reconcileStatefulSet(ctx, server, s, l); err != nil {
-		return err
-	}
-
-	// Create the service for the server.
-	if err := r.reconcileService(ctx, server, s, l); err != nil {
-		return err
+	// Get the address of the service.
+	address := service.Status.
+	if address == "" {
+		return fmt.Errorf("service address not available")
 	}
 
 	// Update the status of the server.
-	if err := r.setCurrentState(ctx, server, l); err != nil {
-		return err
-	}
-
+	server.Status.Address = address
 	return nil
 }
 
@@ -477,7 +501,7 @@ func (r *ServerReconciler) reconcileService(ctx context.Context, server *polaris
 			Selector: map[string]string{
 				"id": server.Spec.Id,
 			},
-			Type:  corev1.ServiceTypeLoadBalancer,
+			Type:  corev1.ServiceTypeNodePort,
 			Ports: servicePorts,
 		},
 	}

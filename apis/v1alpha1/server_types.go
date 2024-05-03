@@ -63,11 +63,6 @@ type Network struct {
 	//
 	// +optional
 	Type NetworkType `json:"type"`
-
-	// The IP address of the server.
-	//
-	// +optional
-	Address string `json:"address"`
 }
 
 // ServerSpec defines the desired state of the server.
@@ -116,12 +111,17 @@ const (
 
 // ServerStatus defines the observed state of Server
 type ServerStatus struct {
+	// The IP address of the server.
+	Address string `json:"address"`
+
+	// The current operating condition of the server.
 	State ServerState `json:"state"`
 }
 
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.address`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 // +kubebuilder:resource:scope=Namespaced,shortName=svr,singular=server
 

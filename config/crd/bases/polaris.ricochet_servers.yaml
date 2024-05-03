@@ -17,6 +17,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.address
+      name: Address
+      type: string
     - jsonPath: .status.state
       name: State
       type: string
@@ -74,9 +77,6 @@ spec:
               network:
                 description: The network configuration for the server.
                 properties:
-                  address:
-                    description: The IP address of the server.
-                    type: string
                   type:
                     description: The type of network to be used for the server.
                     enum:
@@ -103,10 +103,11 @@ spec:
           status:
             description: ServerStatus defines the observed state of Server
             properties:
+              address:
+                description: The IP address of the server.
+                type: string
               state:
-                description: |-
-                  ServerState defines the current operating condition of the server.
-                  Only one of the following states may be specified.
+                description: The current operating condition of the server.
                 enum:
                 - provisioning
                 - starting
@@ -118,6 +119,7 @@ spec:
                 - ""
                 type: string
             required:
+            - address
             - state
             type: object
         type: object
