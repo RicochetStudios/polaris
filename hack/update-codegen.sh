@@ -18,6 +18,7 @@ readonly GO111MODULE="on"
 readonly GOFLAGS="-mod=readonly"
 readonly GOPATH="$(mktemp -d)"
 readonly MIN_REQUIRED_GO_VER="$(go list -m -f '{{.GoVersion}}')"
+readonly CODEGEN_VERSION="v0.30.0"
 
 function go_version_matches {
   go version | perl -ne "exit 1 unless m{go version go([0-9]+.[0-9]+)}; exit 1 if (\$1 < ${MIN_REQUIRED_GO_VER})"
@@ -61,69 +62,72 @@ fi
 # Always use the boilerplate from the hack directory.
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
-# Get code-generator
-go get k8s.io/code-generator
 
-# # throw away
-# new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
+# throw away
+new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
 
-# echo "Generating openapi schema"
-# go run k8s.io/code-generator/cmd/openapi-gen \
-#   -O zz_generated.openapi \
-#   --report-filename "${new_report}" \
-#   --output-package "${REPO}/pkg/generated/openapi" \
-#   --input-dirs "${INPUT_DIRS}" \
-#   --input-dirs "k8s.io/apimachinery/pkg/apis/meta/v1" \
-#   --input-dirs "k8s.io/apimachinery/pkg/runtime" \
-#   --input-dirs "k8s.io/apimachinery/pkg/version" \
-#   ${COMMON_FLAGS}
+echo "Generating openapi schema"
+# God knows what version to use here. I'm just going to use the latest.
+go run k8s.io/kube-openapi/cmd/openapi-gen@latest \
+  --output-file zz_generated.openapi.go \
+  --report-filename "${new_report}" \
+  --output-dir "pkg/generated/openapi" \
+  --output-pkg "${REPO}/pkg/generated/openapi" \
+  ${COMMON_FLAGS} \
+  ${INPUT_DIRS} \
+  k8s.io/apimachinery/pkg/apis/meta/v1 \
+  k8s.io/apimachinery/pkg/runtime \
+  k8s.io/apimachinery/pkg/version
 
+# I think this doesn't work, due to a bug here:
+# https://github.com/kubernetes/kubernetes/pull/124371
 # echo "Generating apply configuration"
-# go run k8s.io/code-generator/cmd/applyconfiguration-gen \
-#   --input-dirs "${INPUT_DIRS}" \
+# go run k8s.io/code-generator/cmd/applyconfiguration-gen@$CODEGEN_VERSION \
 #   --openapi-schema <(go run ${SCRIPT_ROOT}/cmd/modelschema) \
-#   --output-package "${APIS_PKG}/apis/applyconfiguration" \
-#   ${COMMON_FLAGS}
+#   --output-dir "apis/applyconfiguration" \
+#   --output-pkg "${REPO}/apis/applyconfiguration" \
+#   ${COMMON_FLAGS} \
+#   ${INPUT_DIRS}
 
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/"
-go run k8s.io/code-generator/cmd/client-gen \
+go run k8s.io/code-generator/cmd/client-gen@$CODEGEN_VERSION \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base '' \
     --input "${INPUT_DIRS}" \
-    --output-base pkg/ \
-    --output-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/" \
-    --trim-path-prefix "pkg/${REPO}/" \
+    --output-dir "pkg/client/${CLIENTSET_PKG_NAME}" \
+    --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/" \
     ${COMMON_FLAGS}
 
 
 echo "Generating listers at ${OUTPUT_PKG}/listers"
-go run k8s.io/code-generator/cmd/lister-gen \
-  --input-dirs "${INPUT_DIRS}" \
-  --output-package "${OUTPUT_PKG}/listers" \
-  ${COMMON_FLAGS}
+go run k8s.io/code-generator/cmd/lister-gen@$CODEGEN_VERSION \
+  --output-dir "pkg/client/listers" \
+  --output-pkg "${OUTPUT_PKG}/listers" \
+  ${COMMON_FLAGS} \
+  ${INPUT_DIRS}
 
 echo "Generating informers at ${OUTPUT_PKG}/informers"
-go run k8s.io/code-generator/cmd/informer-gen \
-  --input-dirs "${INPUT_DIRS}" \
+go run k8s.io/code-generator/cmd/informer-gen@$CODEGEN_VERSION \
   --versioned-clientset-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/${CLIENTSET_NAME}" \
   --listers-package "${OUTPUT_PKG}/listers" \
-  --output-package "${OUTPUT_PKG}/informers" \
-  ${COMMON_FLAGS}
+  --output-dir "pkg/client/informers" \
+  --output-pkg "${OUTPUT_PKG}/informers" \
+  ${COMMON_FLAGS} \
+  ${INPUT_DIRS}
 
 echo "Generating ${VERSION} register at ${REPO}/${APIS_DIR}/${VERSION}"
-go run k8s.io/code-generator/cmd/register-gen \
-  --input-dirs "${INPUT_DIRS}" \
-  --output-package "${APIS_DIR}" \
-  ${COMMON_FLAGS}
+go run k8s.io/code-generator/cmd/register-gen@$CODEGEN_VERSION \
+  --output-file zz_generated.register.go \
+  ${COMMON_FLAGS} \
+  ${INPUT_DIRS}
 
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/"
-go run k8s.io/code-generator/cmd/client-gen \
+go run k8s.io/code-generator/cmd/client-gen@$CODEGEN_VERSION \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base '' \
     --input "${INPUT_DIRS}" \
-    --output-base pkg/ \
-    --output-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/" \
-    --trim-path-prefix "pkg/${REPO}/" \
+    --output-dir "pkg/client/${CLIENTSET_PKG_NAME}" \
+    --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/" \
     ${COMMON_FLAGS}
