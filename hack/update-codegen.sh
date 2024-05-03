@@ -18,6 +18,7 @@ readonly GO111MODULE="on"
 readonly GOFLAGS="-mod=readonly"
 readonly GOPATH="$(mktemp -d)"
 readonly MIN_REQUIRED_GO_VER="$(go list -m -f '{{.GoVersion}}')"
+readonly CODEGEN_VERSION="v0.30.0"
 
 function go_version_matches {
   go version | perl -ne "exit 1 unless m{go version go([0-9]+.[0-9]+)}; exit 1 if (\$1 < ${MIN_REQUIRED_GO_VER})"
@@ -61,8 +62,6 @@ fi
 # Always use the boilerplate from the hack directory.
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
-# Get code-generator
-go install k8s.io/code-generator
 
 # # throw away
 # new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
@@ -87,7 +86,7 @@ go install k8s.io/code-generator
 
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/"
-go run k8s.io/code-generator/cmd/client-gen \
+go run k8s.io/code-generator/cmd/client-gen@$CODEGEN_VERSION \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base '' \
     --input "${INPUT_DIRS}" \
@@ -97,14 +96,14 @@ go run k8s.io/code-generator/cmd/client-gen \
 
 
 echo "Generating listers at ${OUTPUT_PKG}/listers"
-go run k8s.io/code-generator/cmd/lister-gen \
+go run k8s.io/code-generator/cmd/lister-gen@$CODEGEN_VERSION \
   --output-dir "pkg/client/listers" \
   --output-pkg "${OUTPUT_PKG}/listers" \
   ${COMMON_FLAGS} \
   ${INPUT_DIRS}
 
 echo "Generating informers at ${OUTPUT_PKG}/informers"
-go run k8s.io/code-generator/cmd/informer-gen \
+go run k8s.io/code-generator/cmd/informer-gen@$CODEGEN_VERSION \
   --versioned-clientset-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/${CLIENTSET_NAME}" \
   --listers-package "${OUTPUT_PKG}/listers" \
   --output-dir "pkg/client/informers" \
@@ -113,14 +112,14 @@ go run k8s.io/code-generator/cmd/informer-gen \
   ${INPUT_DIRS}
 
 echo "Generating ${VERSION} register at ${REPO}/${APIS_DIR}/${VERSION}"
-go run k8s.io/code-generator/cmd/register-gen \
+go run k8s.io/code-generator/cmd/register-gen@$CODEGEN_VERSION \
   --output-file zz_generated.register.go \
   ${COMMON_FLAGS} \
   ${INPUT_DIRS}
 
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/"
-go run k8s.io/code-generator/cmd/client-gen \
+go run k8s.io/code-generator/cmd/client-gen@$CODEGEN_VERSION \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base '' \
     --input "${INPUT_DIRS}" \
