@@ -16,6 +16,7 @@ limitations under the License.
 
 // Package v1alpha contains API Schema definitions for the polaris v1 API group.
 //
+// +k8s:openapi-gen=true
 // +kubebuilder:object:generate=true
 // +groupName=polaris.ricochet
 package v1alpha1

@@ -63,26 +63,30 @@ fi
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 
-# # throw away
-# new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
+# throw away
+new_report="$(mktemp -t "$(basename "$0").api_violations.XXXXXX")"
 
-# echo "Generating openapi schema"
-# go run k8s.io/code-generator/cmd/openapi-gen \
-#   -O zz_generated.openapi \
-#   --report-filename "${new_report}" \
-#   --output-pkg "${REPO}/pkg/generated/openapi" \
-#   --input-dirs "${INPUT_DIRS}" \
-#   --input-dirs "k8s.io/apimachinery/pkg/apis/meta/v1" \
-#   --input-dirs "k8s.io/apimachinery/pkg/runtime" \
-#   --input-dirs "k8s.io/apimachinery/pkg/version" \
-#   ${COMMON_FLAGS}
+echo "Generating openapi schema"
+go run k8s.io/kube-openapi/cmd/openapi-gen@latest \
+  --output-file zz_generated.openapi.go \
+  --report-filename "${new_report}" \
+  --output-dir "pkg/generated/openapi" \
+  --output-pkg "${REPO}/pkg/generated/openapi" \
+  ${COMMON_FLAGS} \
+  ${INPUT_DIRS} \
+  k8s.io/apimachinery/pkg/apis/meta/v1 \
+  k8s.io/apimachinery/pkg/runtime \
+  k8s.io/apimachinery/pkg/version
 
+# I think this doesn't work, due to a bug here:
+# https://github.com/kubernetes/kubernetes/pull/124371
 # echo "Generating apply configuration"
-# go run k8s.io/code-generator/cmd/applyconfiguration-gen \
-#   --input-dirs "${INPUT_DIRS}" \
+# go run k8s.io/code-generator/cmd/applyconfiguration-gen@$CODEGEN_VERSION \
 #   --openapi-schema <(go run ${SCRIPT_ROOT}/cmd/modelschema) \
-#   --output-pkg "${APIS_PKG}/apis/applyconfiguration" \
-#   ${COMMON_FLAGS}
+#   --output-dir "apis/applyconfiguration" \
+#   --output-pkg "${REPO}/apis/applyconfiguration" \
+#   ${COMMON_FLAGS} \
+#   ${INPUT_DIRS}
 
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/"
