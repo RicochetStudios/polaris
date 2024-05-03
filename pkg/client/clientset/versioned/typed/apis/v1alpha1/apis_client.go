@@ -27,12 +27,17 @@ import (
 
 type PolarisV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	GatewaysGetter
 	ServersGetter
 }
 
 // PolarisV1alpha1Client is used to interact with features provided by the polaris.ricochet group.
 type PolarisV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *PolarisV1alpha1Client) Gateways(namespace string) GatewayInterface {
+	return newGateways(c, namespace)
 }
 
 func (c *PolarisV1alpha1Client) Servers(namespace string) ServerInterface {

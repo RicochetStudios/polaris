@@ -29,6 +29,10 @@ import (
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
 		"github.com/RicochetStudios/polaris/apis/v1alpha1.Game":          schema_RicochetStudios_polaris_apis_v1alpha1_Game(ref),
+		"github.com/RicochetStudios/polaris/apis/v1alpha1.Gateway":       schema_RicochetStudios_polaris_apis_v1alpha1_Gateway(ref),
+		"github.com/RicochetStudios/polaris/apis/v1alpha1.GatewayList":   schema_RicochetStudios_polaris_apis_v1alpha1_GatewayList(ref),
+		"github.com/RicochetStudios/polaris/apis/v1alpha1.GatewaySpec":   schema_RicochetStudios_polaris_apis_v1alpha1_GatewaySpec(ref),
+		"github.com/RicochetStudios/polaris/apis/v1alpha1.GatewayStatus": schema_RicochetStudios_polaris_apis_v1alpha1_GatewayStatus(ref),
 		"github.com/RicochetStudios/polaris/apis/v1alpha1.Network":       schema_RicochetStudios_polaris_apis_v1alpha1_Network(ref),
 		"github.com/RicochetStudios/polaris/apis/v1alpha1.Server":        schema_RicochetStudios_polaris_apis_v1alpha1_Server(ref),
 		"github.com/RicochetStudios/polaris/apis/v1alpha1.ServerList":    schema_RicochetStudios_polaris_apis_v1alpha1_ServerList(ref),
@@ -124,6 +128,183 @@ func schema_RicochetStudios_polaris_apis_v1alpha1_Game(ref common.ReferenceCallb
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_RicochetStudios_polaris_apis_v1alpha1_Gateway(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Gateway is the Schema for the gateways API",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/RicochetStudios/polaris/apis/v1alpha1.GatewaySpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/RicochetStudios/polaris/apis/v1alpha1.GatewayStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/RicochetStudios/polaris/apis/v1alpha1.GatewaySpec", "github.com/RicochetStudios/polaris/apis/v1alpha1.GatewayStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_RicochetStudios_polaris_apis_v1alpha1_GatewayList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GatewayList contains a list of Gateway",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/RicochetStudios/polaris/apis/v1alpha1.Gateway"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/RicochetStudios/polaris/apis/v1alpha1.Gateway", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_RicochetStudios_polaris_apis_v1alpha1_GatewaySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GatewaySpec defines the desired state of Gateway",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"gatewayClassName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GatewayClassName used for this Gateway. This is the name of a GatewayClass resource.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"address": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GatewayAddress describes an address that can be bound to a Gateway.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("sigs.k8s.io/gateway-api/apis/v1.GatewayAddress"),
+						},
+					},
+					"infrastructure": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Infrastructure defines infrastructure level attributes about this Gateway instance.\n\nSupport: Core\n\n<gateway:experimental>",
+							Ref:         ref("sigs.k8s.io/gateway-api/apis/v1.GatewayInfrastructure"),
+						},
+					},
+				},
+				Required: []string{"gatewayClassName"},
+			},
+		},
+		Dependencies: []string{
+			"sigs.k8s.io/gateway-api/apis/v1.GatewayAddress", "sigs.k8s.io/gateway-api/apis/v1.GatewayInfrastructure"},
+	}
+}
+
+func schema_RicochetStudios_polaris_apis_v1alpha1_GatewayStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GatewayStatus defines the observed state of Gateway",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"address": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GatewayAddress describes an address that can be bound to a Gateway.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("sigs.k8s.io/gateway-api/apis/v1.GatewayStatusAddress"),
+						},
+					},
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-map-keys": []interface{}{
+									"type",
+								},
+								"x-kubernetes-list-type": "map",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions describe the current conditions of the Gateway.\n\nImplementations should prefer to express Gateway conditions using the `GatewayConditionType` and `GatewayConditionReason` constants so that operators and tools can converge on a common vocabulary to describe Gateway state.\n\nKnown condition types are:\n\n* \"Accepted\" * \"Programmed\" * \"Ready\"",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.Condition"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Condition", "sigs.k8s.io/gateway-api/apis/v1.GatewayStatusAddress"},
 	}
 }
 

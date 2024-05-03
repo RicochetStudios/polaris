@@ -17,6 +17,14 @@ limitations under the License.
 
 package v1alpha1
 
+// GatewayListerExpansion allows custom methods to be added to
+// GatewayLister.
+type GatewayListerExpansion interface{}
+
+// GatewayNamespaceListerExpansion allows custom methods to be added to
+// GatewayNamespaceLister.
+type GatewayNamespaceListerExpansion interface{}
+
 // ServerListerExpansion allows custom methods to be added to
 // ServerLister.
 type ServerListerExpansion interface{}

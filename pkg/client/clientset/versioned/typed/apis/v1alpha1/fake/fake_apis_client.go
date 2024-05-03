@@ -27,6 +27,10 @@ type FakePolarisV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakePolarisV1alpha1) Gateways(namespace string) v1alpha1.GatewayInterface {
+	return &FakeGateways{c, namespace}
+}
+
 func (c *FakePolarisV1alpha1) Servers(namespace string) v1alpha1.ServerInterface {
 	return &FakeServers{c, namespace}
 }
