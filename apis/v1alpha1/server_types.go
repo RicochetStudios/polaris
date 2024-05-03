@@ -142,7 +142,3 @@ type ServerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Server `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Server{}, &ServerList{})
-}
