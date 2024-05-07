@@ -54,11 +54,38 @@ type GatewaySpec struct {
 	// GatewayClass resource.
 	GatewayClassName gatewayv1.ObjectName `json:"gatewayClassName"`
 
-	// GatewayAddress describes an address that can be bound to a Gateway.
+	// Addresses requested for this Gateway. This is optional and behavior can
+	// depend on the implementation. If a value is set in the spec and the
+	// requested address is invalid or unavailable, the implementation MUST
+	// indicate this in the associated entry in GatewayStatus.Addresses.
+	//
+	// The Addresses field represents a request for the address(es) on the
+	// "outside of the Gateway", that traffic bound for this Gateway will use.
+	// This could be the IP address or hostname of an external load balancer or
+	// other networking infrastructure, or some other address that traffic will
+	// be sent to.
+	//
+	// If no Addresses are specified, the implementation MAY schedule the
+	// Gateway in an implementation-specific manner, assigning an appropriate
+	// set of Addresses.
+	//
+	// The implementation MUST bind all Listeners to every GatewayAddress that
+	// it assigns to the Gateway and add a corresponding entry in
+	// GatewayStatus.Addresses.
+	//
+	// Support: Extended
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="Hostname value must only contain valid characters (matching ^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)",rule="self.type == 'Hostname' ? self.value.matches(r\"\"\"^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$\"\"\"): true"
-	Address gatewayv1.GatewayAddress `json:"address,omitempty"`
+	// <gateway:validateIPAddress>
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:XValidation:message="IPAddress values must be unique",rule="self.all(a1, a1.type == 'IPAddress' ? self.exists_one(a2, a2.type == a1.type && a2.value == a1.value) : true )"
+	// +kubebuilder:validation:XValidation:message="Hostname values must be unique",rule="self.all(a1, a1.type == 'Hostname' ? self.exists_one(a2, a2.type == a1.type && a2.value == a1.value) : true )"
+	Addresses []gatewayv1.GatewayAddress `json:"addresses,omitempty"`
+
+	// Map of string keys and values which services can use to select this Gateway.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 
 	// Infrastructure defines infrastructure level attributes about this Gateway instance.
 	//
@@ -71,11 +98,25 @@ type GatewaySpec struct {
 
 // GatewayStatus defines the observed state of Gateway
 type GatewayStatus struct {
-	// GatewayAddress describes an address that can be bound to a Gateway.
+	// Addresses lists the network addresses that have been bound to the
+	// Gateway.
+	//
+	// This list may differ from the addresses provided in the spec under some
+	// conditions:
+	//
+	//   * no addresses are specified, all addresses are dynamically assigned
+	//   * a combination of specified and dynamic addresses are assigned
+	//   * a specified address was unusable (e.g. already in use)
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="Hostname value must only contain valid characters (matching ^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)",rule="self.type == 'Hostname' ? self.value.matches(r\"\"\"^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$\"\"\"): true"
-	Address gatewayv1.GatewayStatusAddress `json:"address,omitempty"`
+	// <gateway:validateIPAddress>
+	// +kubebuilder:validation:MaxItems=16
+	Addresses []gatewayv1.GatewayStatusAddress `json:"addresses,omitempty"`
+
+	// Services is a list of service names that are bound to this Gateway.
+	//
+	// +optional
+	Services []string `json:"services,omitempty"`
 
 	// Conditions describe the current conditions of the Gateway.
 	//
