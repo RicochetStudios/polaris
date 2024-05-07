@@ -242,11 +242,34 @@ func schema_RicochetStudios_polaris_apis_v1alpha1_GatewaySpec(ref common.Referen
 							Format:      "",
 						},
 					},
-					"address": {
+					"addresses": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GatewayAddress describes an address that can be bound to a Gateway.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("sigs.k8s.io/gateway-api/apis/v1.GatewayAddress"),
+							Description: "Addresses requested for this Gateway. This is optional and behavior can depend on the implementation. If a value is set in the spec and the requested address is invalid or unavailable, the implementation MUST indicate this in the associated entry in GatewayStatus.Addresses.\n\nThe Addresses field represents a request for the address(es) on the \"outside of the Gateway\", that traffic bound for this Gateway will use. This could be the IP address or hostname of an external load balancer or other networking infrastructure, or some other address that traffic will be sent to.\n\nIf no Addresses are specified, the implementation MAY schedule the Gateway in an implementation-specific manner, assigning an appropriate set of Addresses.\n\nThe implementation MUST bind all Listeners to every GatewayAddress that it assigns to the Gateway and add a corresponding entry in GatewayStatus.Addresses.\n\nSupport: Extended\n\n<gateway:validateIPAddress>",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("sigs.k8s.io/gateway-api/apis/v1.GatewayAddress"),
+									},
+								},
+							},
+						},
+					},
+					"labels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Map of string keys and values which services can use to select this Gateway.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"infrastructure": {
@@ -271,11 +294,33 @@ func schema_RicochetStudios_polaris_apis_v1alpha1_GatewayStatus(ref common.Refer
 				Description: "GatewayStatus defines the observed state of Gateway",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"address": {
+					"addresses": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GatewayAddress describes an address that can be bound to a Gateway.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("sigs.k8s.io/gateway-api/apis/v1.GatewayStatusAddress"),
+							Description: "Addresses lists the network addresses that have been bound to the Gateway.\n\nThis list may differ from the addresses provided in the spec under some conditions:\n\n  * no addresses are specified, all addresses are dynamically assigned\n  * a combination of specified and dynamic addresses are assigned\n  * a specified address was unusable (e.g. already in use)\n\n<gateway:validateIPAddress>",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("sigs.k8s.io/gateway-api/apis/v1.GatewayStatusAddress"),
+									},
+								},
+							},
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is a list of service names that are bound to this Gateway.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"conditions": {
