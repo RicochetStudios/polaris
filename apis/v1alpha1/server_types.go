@@ -68,6 +68,11 @@ type Network struct {
 	//
 	// +optional
 	Address string `json:"address"`
+
+	// Map of string keys and values which select the gateway to use for this server.
+	//
+	// +optional
+	GatewayLabels map[string]string `json:"labels,omitempty"`
 }
 
 // ServerSpec defines the desired state of the server.

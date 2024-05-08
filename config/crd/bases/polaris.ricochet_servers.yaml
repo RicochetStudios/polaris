@@ -77,6 +77,12 @@ spec:
                   address:
                     description: The IP address of the server.
                     type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Map of string keys and values which select the gateway
+                      to use for this server.
+                    type: object
                   type:
                     description: The type of network to be used for the server.
                     enum:
